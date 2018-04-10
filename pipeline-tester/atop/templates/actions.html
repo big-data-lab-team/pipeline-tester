@@ -1,0 +1,71 @@
+    {% if user.is_authenticated %}
+    <button type="button" class="btn btn-primary btn-lg btn-block" data-toggle="modal" data-target="#modal-add">Add</button>
+    <button type="button" class="btn btn-primary btn-lg btn-block" href="/run_tests/">Run tests</button>
+    <button type="button" class="btn btn-primary btn-lg btn-block" href="/accounts/logout.html">Log out</button>
+
+    <div class="modal fade" id="modal-add" tabindex="-1" role="dialog" aria-labelledby="#modal-add" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="exampleModalLongTitle">Add</h5>
+            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+              <span aria-hidden="true">&times;</span>
+            </button>
+          </div>
+          <div class="modal-body">
+            {% include "./add_tool.html" %}
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+            <button class="btn btn-primary"  type="submit" class="btn btn-default" form="form1">Submit</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    {% else %}
+    <button type="button" class="btn btn-dark btn-lg btn-block" data-toggle="modal" data-target="#modal-signup">Sign-up</button>
+
+    <div class="modal fade" id="modal-signup" tabindex="-1" role="dialog" aria-labelledby="#modal-signup" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="exampleModalLongTitle">Add</h5>
+            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+              <span aria-hidden="true">&times;</span>
+            </button>
+          </div>
+          <div class="modal-body">
+
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+            <button class="btn btn-primary"  type="submit" class="btn btn-default" form="form1">Submit</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <button type="button" class="btn btn-dark btn-lg btn-block" data-toggle="modal" data-target="#modal-login">Login</button>
+
+    <div class="modal fade" id="modal-login" tabindex="-1" role="dialog" aria-labelledby="#modal-login" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="exampleModalLongTitle">Add</h5>
+            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+              <span aria-hidden="true">&times;</span>
+            </button>
+          </div>
+          <div class="modal-body">
+            
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+            <button class="btn btn-primary"  type="submit" class="btn btn-default" form="form1">Submit</button>
+          </div>
+        </div>
+      </div>
+    </div>
+	
+    {% endif %}

@@ -1,0 +1,30 @@
+.tabbable {
+    margin: 10px;
+    height: 300px;
+    overflow: hidden;
+}
+
+.nav-tabs {
+    margin: 0;
+}
+
+.tab-content {
+    height: 100%; 
+    border-left: 1px solid #ccc ; 
+    border-right: 1px solid #ccc;
+    border-bottom: 1px solid #ccc;
+
+}
+
+.form-check-input {
+    margin-left: 0;
+    
+}
+
+.top1 {
+    margin-top: 1.25rem;
+    margin-bottom: 1.25rem;
+    //margin-left: .25rem;
+
+
+}
