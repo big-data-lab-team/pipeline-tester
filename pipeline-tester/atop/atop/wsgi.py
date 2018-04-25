@@ -14,3 +14,11 @@ from django.core.wsgi import get_wsgi_application
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "atop.settings")
 
 application = get_wsgi_application()
+
+print("new")
+
+from threading import Thread
+from atop.runqueue import RunQueue
+
+run_queue = RunQueue()
+threaded_run_queue = Thread(target=run_queue.run_loop).start()
