@@ -1,10 +1,5 @@
 <script>
 $(document).ready(function() {
-
-    // Invalid username
-        // Invalid characters: special characters, too long, too short
-        // Username taken
-    // Invalid password 
     
    const FIELD_VALIDATOR_VALIDATION_SUCESS = 0
    const FIELD_VALIDATOR_VALIDATION_FAILURE = 1
@@ -142,7 +137,7 @@ $(document).ready(function() {
             this._reset();
             this._loadingStart();
                         
-            var jsonInput = this._jsonize();
+            //var jsonInput = this._jsonize();
                         
             var csrftoken = jQuery("[name=csrfmiddlewaretoken]").val();
             ajaxRequest = {
@@ -189,70 +184,58 @@ $(document).ready(function() {
     }
 
     
-    var field_username = new AjaxField("id_username", "username_msg", "username");
-    var field_password1 = new AjaxField("id_password1", "password1_msg", "password1");
-    var field_password2 = new AjaxField("id_password2", "password2_msg", "password2");
     
-    var fields = [field_username, field_password1, field_password2];
     
-    ajax_form = new AjaxFieldForm(fields, "/register/", "form_register", "statusIconOverlay", "/register/");    
+    
+    
+    var field_username = new AjaxField("id_login_username", "login_username_msg", "username");
+    var field_password = new AjaxField("id_login_password", "login_password_msg", "password");
+    var field_msg_all = new AjaxField(null, "login_all_msg", "__all__");    
+    var fields = [field_username, field_password, field_msg_all];
+    
+    ajax_login_form = new AjaxFieldForm(fields, "/login/", "form_login", "login_statusIconOverlay", "/login/");    
     
     
 });
 
 </script>
   
-  <form method="post" role="form" id="form_register">
-    {% csrf_token %}
-  <div class="form-group row">
-        <div class="col-md-12">
-            <label for="id_username">Enter a username:</label>
-            <div class="input-group">
-                <span class="input-group-addon"><i class="fas fa-user fa-sm fa-fw"></i></span>
-                {{ form_signup.username }}
-                <script type="text/javascript">
-                    $('#id_username').addClass("form-control");
-                    $('#id_username').attr("placeholder", "Enter a username");
-                </script>
-                
-            </div>
-       </div>
-  </div>
-  <div class="alert alert-danger" role="alert" id="username_msg"></div>
-
+  {% csrf_token %}
+  <form method="post" role="form" id="form_login">
   <div class="form-group row">
       <div class="col-md-12">
-            <label for="id_password1">Enter a password:</label>
+            <label for="login_id_username">Enter your username:</label>
             <div class="input-group">
-                <span class="input-group-addon"><i class="fas fa-lock fa-sm fa-fw"></i></span>
-                {{ form_signup.password1 }}
+                <span class="input-group-addon"><i class="fas fa-user fa-sm fa-fw"></i></span>
+                {{ form_login.username }}
                 <script type="text/javascript">
-                    $('#id_password1').addClass("form-control");
-                    $('#id_password1').attr("placeholder", "Enter a password");
+                    $('#id_login_username').addClass("form-control");
+                    $('#id_login_username').attr("placeholder", "Enter your username");
                 </script>               
                 
             </div>
        </div>
   </div>
-  <div class="alert alert-danger" role="alert" id="password1_msg"></div>
+  <div class="alert alert-danger" role="alert" id="login_username_msg"></div>
   
  <div class="form-group row">
       <div class="col-md-12">
-            <label for="id_password2">Confirm your password:</label>
+            <label for="login_id_password">Enter your password:</label>
             <div class="input-group">
                 <span class="input-group-addon"><i class="fas fa-lock fa-sm fa-fw"></i></span>
-                {{ form_signup.password2 }}
+                {{ form_login.password }}
                 <script type="text/javascript">
-                    $('#id_password2').addClass("form-control");
-                    $('#id_password2').attr("placeholder", "Confirm your password");
+                    $('#id_login_password').addClass("form-control");
+                    $('#id_login_password').attr("placeholder", "Enter your password");
                 </script>               
                 
             </div>
        </div>
   </div>
-  <div class="alert alert-danger" role="alert" id="password2_msg"></div>
-  </form>
-  <center><span id="statusIconOverlay"><i  class="fas fa-spinner fa-pulse fa-lg fa-fw" style="position: relative; vertical-align: middle; top: 10px;"></i></span><center>
+  <div class="alert alert-danger" role="alert" id="login_password_msg"></div>
+  <div class="alert alert-danger" role="alert" id="login_all_msg"></div>
+  <center><span id="login_statusIconOverlay"><i  class="fas fa-spinner fa-pulse fa-lg fa-fw" style="position: relative; vertical-align: middle; top: 10px;"></i></span><center>
   <script type="text/javascript">
-      $('#statusIconOverlay').hide();
+      $('#login_statusIconOverlay').hide();
   </script>
+  </form>

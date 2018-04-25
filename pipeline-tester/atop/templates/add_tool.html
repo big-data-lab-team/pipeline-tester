@@ -4,9 +4,9 @@
         {% csrf_token %}
           <div id="tabs">
           <ul class="nav nav-tabs" role="tablist">
-            <li class="nav-item"><a class="nav-link active" data-toggle="tab" href="#tabs-1" role="tab" id="tab-computer">Computer</a></li>
-            <li class="nav-item"><a class="nav-link" data-toggle="tab" href="#tabs-2" role="tab" id="tab-web">Web</a></li>
-            <li class="nav-item"><a class="nav-link" data-toggle="tab" href="#tabs-3" role="tab" id="tab-carmin">CARMIN</a></li>
+            <li class="nav-item"><a class="nav-link active" data-toggle="tab" href="#tabs-1" role="tab" id="tab-computer"><i class="fas fa-upload fa-lg fa-fw"></i> Computer</a></li>
+            <li class="nav-item"><a class="nav-link" data-toggle="tab" href="#tabs-2" role="tab" id="tab-web"><i class="fas fa-globe fa-lg fa-fw"></i> Web</a></li>
+            <li class="nav-item"><a class="nav-link" data-toggle="tab" href="#tabs-3" role="tab" id="tab-carmin"><i class="fas fa-server fa-lg fa-fw"></i> CARMIN</a></li>
           </ul>
           
           <div class="tab-content">
@@ -88,7 +88,6 @@
             {{  form.is_public }}
             <label class="form-check-label" for="id_is_public">Public</label>
          </div>
-            <button class="btn btn-primary"  type="submit" class="btn btn-default" form="form1">Submit</button>
          </div>
     </form>
     </div>

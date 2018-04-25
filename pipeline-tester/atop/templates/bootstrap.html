@@ -90,7 +90,7 @@ $(document).ready(function(){
                     }
                 },
                 error: function (data) {
-                    alert(data);
+                    //alert(data);
                 }
             };
             
@@ -158,12 +158,11 @@ $(document).ready(function(){
             
             // Check that we do not have any errors associated with the data.
             if (this.erroneous || !this.valid) {
-                            alert(this.valid);
+                //alert(this.valid);
                 return false;
             }
             
             // Submission can proceed.
-            alert("REACHED");
             // Indicate that this tab should be the one to process
             $('<input />').attr('type', 'hidden')
                .attr('name', "data_selector")
@@ -317,12 +316,26 @@ $(document).ready(function(){
       e.preventDefault()
       $(this).tab('show')
     });
+    
+    $('#tabs a').click(function (e) {
+      e.preventDefault()
+      $(this).tab('show')
+    });
+    
+    
+    $(".action-delete").click(function () {
         
+        var id = $(this).attr("delete-id");
+        var message = "Are you sure you want to delete this desciptor reference from the platform ?";
+        $("#modalEntryDeletion .modal-body").html(message);
+        $("#modalEntryDeletion #modal-button-delete-yes").attr("delete-id", id); 
+        $("#modalEntryDeletion").modal('toggle');
+        
+    });
 });
 
 
 </script>
-
 <div class="table-container">
     {% block table %}
         <table {% if table.attrs %} {{ table.attrs.as_html }}{% else %}class="table table-striped"{% endif %}>
@@ -351,7 +364,7 @@ $(document).ready(function(){
                             <td {{ column.attrs.td.as_html }}>{% if column.localize == None %}{{ cell }}{% else %}{% if column.localize %}{{ cell|localize }}{% else %}{{ cell|unlocalize }}{% endif %}{% endif %}</td>
                         {% endfor %}
                     </tr>
-					<tr class="collapse " id="test-panel-{{ row.record.id }}" ><td colspan="6">
+					<tr class="collapse " id="test-panel-{{ row.record.id }}" ><td colspan="9" style="background-color: rgb(0, 0, 0, 0.15)">
                             {% if row.record.error_message == "" %}
                             <div class="">
                             <table class="table">
@@ -368,14 +381,26 @@ $(document).ready(function(){
                                           {% if test.execution_status == 2 %}
                                           <tr class="table-danger" data-toggle="collapse" data-target="#assertion-panel-{{ test.id }}">
                                           {% endif %}
-
-                                                  <td> {{ test.test_name }} </td>
-                                                  <td> <samp>{{ test.evaluated_invocation }}</samp> </td>
+                                                  <td> <i class="far fa-file fa-lg fa-fw" style="opacity:0.4"></i>  {{ test.test_name }}</td>
+                                                  <td> <i class="fas fa-terminal fa-sm fa-fw" style="opacity:0.4"></i><samp>    {{ test.evaluated_invocation }}</samp> </td>
                                                   <td> <a data-toggle="collapse" data-target="#assertion-panel-{{ test.id }}">View more</a></td>
                                           </tr>
-            
-                                          <tr class="collapse " id="assertion-panel-{{ test.id }}"><td colspan="6"> 
-                                            <div id="accordion">
+                                    
+                                          <tr class="collapse " id="assertion-panel-{{ test.id }}">
+                                           
+                                          {% if test.execution_status == 0 %}
+                                          <td colspan="3" class=""> 
+                                          {% endif %}                                           
+                                            
+                                          {% if test.execution_status == 1 %}
+                                          <td colspan="3" class="table-success"> 
+                                          {% endif %}
+
+                                          {% if test.execution_status == 2 %}
+                                          <td colspan="3" class="table-danger"> 
+                                          {% endif %}
+                                          
+                                          <div id="accordion">
                                               <div class="card">
                                                 <div class="card-header" id="headingOne">
                                                   <h5 class="mb-0">
@@ -387,7 +412,7 @@ $(document).ready(function(){
 
                                                 <div id="{{ test.id }}-collapseOne" class="collapse show" aria-labelledby="headingOne" data-parent="#accordion">
                                                   <div class="card-body text-white bg-secondary" style="width: 100%;background-color: #20282c;">
-                                                    <pre><code><p class="text-white">{{ test.code }}</p><pre></code>
+                                                    <pre><code><p class="text-white">{{ test.code }}</p></code></pre>
                                                   </div>
                                                 </div>
                                               </div>
@@ -424,7 +449,7 @@ $(document).ready(function(){
                             </div>
                             {% else %}
                           <div class="card-body text-white bg-secondary" style="width: 100%;background-color: #20282c;">
-                            <pre><code><p class="text-white">{{ row.record.error_message }}</p><pre></code>
+                            <pre><code><p class="text-white">{{ row.record.error_message }}</p></code></pre>
                           </div>
                             {% endif %}
                             
@@ -485,3 +510,23 @@ $(document).ready(function(){
     {% endif %}
 </div>
 {% endblock table-wrapper %}
+
+<div class="modal fade" id="modalEntryDeletion" tabindex="-1" role="dialog" aria-labelledby="modalEntryDeletionCenterTitle" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="modalLoginLongTitle">Descriptor removal</h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+      </div>
+      <div class="modal-footer">
+        <button id="modal-button-delete-yes" delete-id="" class="btn btn-primary mr-auto"  onClick="window.location.replace('/delete?id=' + $(this).attr('delete-id'));">Yes</button>
+        <button type="button" class="btn btn-secondary" data-dismiss="modal">No</button>
+      </div>
+    </div>
+  </div>
+</div>
+
