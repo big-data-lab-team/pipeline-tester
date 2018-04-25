@@ -21,8 +21,11 @@ from . import views
 urlpatterns = [
     path('', views.home),
     path('admin/', admin.site.urls),
-    path('accounts/signup/', views.SignUp.as_view(), name='signup'),
-    path('accounts/', include('django.contrib.auth.urls')),
+    path('register/', views.register, name="register"),
+    path('login/', views.login, name="login"),
+    path('delete/', views.delete, name="delete"),
+#	path('add_tool/', views.add_tool, name="add_tool"),
     path('run_tests/', views.run_tests, name="run_tests"),
-    path('validate_descriptor/', views.validate_descriptor_submit, name="validate_descriptor_submit"),
+    path('validate_descriptor/', views.validate, name="validate"),
+    path('logout/', views.log_out, name="log_out"),
 ]
