@@ -12,16 +12,22 @@ def user_directory_path(instance, filename):
 class CarminPlatform(models.Model):
     root_url = models.URLField(default="")
     api_key = models.CharField(max_length=100)
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    is_public = models.BooleanField(default=False, verbose_name="exposure")
+    name = models.CharField(max_length=100)
 
 EXECUTION_STATUS_UNCHECKED = 0
 EXECUTION_STATUS_SUCCESS = 1
 EXECUTION_STATUS_FAILURE = 2
 EXECUTION_STATUS_ERROR = 3
+EXECUTION_STATUS_SCHEDULED = 4
+EXECUTION_STATUS_RUNNING = 5
 class Descriptor(models.Model):
     tool_name = models.CharField(max_length=100, verbose_name="tool name")
+    version = models.CharField(max_length=100, verbose_name="version")
     execution_status = models.IntegerField(default=EXECUTION_STATUS_UNCHECKED, verbose_name="status")
     is_public = models.BooleanField(default=False, verbose_name="exposure")
-    last_updated = models.DateTimeField(auto_now=True, verbose_name="date added")
+    last_updated = models.DateTimeField(auto_now=True, verbose_name="last updated")
     
     user_id = models.ForeignKey(User, on_delete=models.CASCADE)
     data_url = models.URLField(default="")
