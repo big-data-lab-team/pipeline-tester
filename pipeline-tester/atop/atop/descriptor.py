@@ -1,4 +1,4 @@
-from atop.common import get_JSON, get_bosh_cmdline, create_temporary_file, calculate_MD5
+from atop.common import get_JSON, get_bosh_cmdline, create_temporary_file, calculate_MD5, HTTPGetter
 from atop.models import Descriptor, DescriptorTest, DescriptorTestAssertion
 from atop.models import EXECUTION_STATUS_UNCHECKED, EXECUTION_STATUS_SUCCESS, EXECUTION_STATUS_FAILURE, EXECUTION_STATUS_ERROR, EXECUTION_STATUS_SCHEDULED, EXECUTION_STATUS_RUNNING
 from atop.models import ASSERTION_EXITCODE, ASSERTION_OUTPUT_FILE_EXISTS, ASSERTION_OUTPUT_FILE_MATCHES_MD5
@@ -21,37 +21,41 @@ DATA_SELECTOR_FILE = 0
 DATA_SELECTOR_URL = 1
 
 
-class DescriptorDataCandidateURLContainer:
+class DescriptorDataCandidateContainer:
+    
+    def is_medium_erroneous(self):
+        return False
+
+
+
+
+class DescriptorDataCandidateURLContainer(DescriptorDataCandidateContainer):
 
     def __init__(self, url):
         self.url = url
-        self.data_buffer = None
+        http_getter = HTTPGetter(url)
+        if (http_getter.is_erroneous()):
+            self.erroneous = True
+            self.error = http_getter.get_error()
+        else:
+            self.erroneous = False
+            self.error = ""
+            self.data = http_getter.get_data()            
         
     def get_url(self):
         return self.url
-    
-    # Buffer data respone when the URL is valid
-    # The second call to this method will deliver what has been buffered
+
+    def is_medium_erroneous(self):
+        return self.erroneous
+
+    def get_error(self):
+        return self.error
+
     def get_data(self):
-        
-        if (self.data_buffer):
-            return self.data_buffer
-        
-        try:
-            req = Request(self.url)
-            data = urlopen(req).read()
-            self.data_buffer = data
-            return data
-        except HTTPError as e:
-            raise Exception("[" + str(e.code) + "] " + e.reason + "(" + self.url + ")")
-        except URLError as e:
-            raise Exception("URL error (" + e.reason + ") (" + self.url + ")")
-        except ContentTooShortError:
-            raise Exception("Content too short (" + self.url + ")")
-        except ValueError:
-            raise Exception("Invalid URL (" + self.url + ")")
+        #print("data: " + str(self.data))
+        return self.data
     
-class DescriptorDataCandidateLocalFileContainer:
+class DescriptorDataCandidateLocalFileContainer(DescriptorDataCandidateContainer):
     
     def __init__(self, file):
         self.file = file
@@ -65,7 +69,7 @@ class DescriptorDataCandidateLocalFileContainer:
         return self.file
 
 
-class DescriptorDataCandidateLocalRawContainer:
+class DescriptorDataCandidateLocalRawContainer(DescriptorDataCandidateContainer):
 
     def __init__(self, raw_data):
         self.raw_data = raw_data
@@ -92,13 +96,14 @@ class DescriptorDataCandidate:
       
     def validate(self):
         
-        # The try - except is only set in case we have a URL container
-        try:
-            desc_content = self.container.get_data()
-        except Exception as e:
+        # This is here in case we have a URL container
+        if (self.container.is_medium_erroneous()):
             self.validated = False
-            self.message = str(e)
+            self.message = self.container.get_error()
             return False
+        else:
+            desc_content = self.container.get_data()
+
                         
         # Call bosh validate on the data
         file = create_temporary_file(desc_content)
@@ -135,7 +140,6 @@ class DescriptorDataCandidate:
         self.db_desc = Descriptor()
         
         self.db_desc.is_public = self.is_public
-        self.db_desc.execution_status = EXECUTION_STATUS_UNCHECKED
         self.db_desc.user_id = self.user
         
         file = create_temporary_file(self.container.get_data())
@@ -152,6 +156,8 @@ class DescriptorDataCandidate:
 
         self.db_desc.md5 = calculate_MD5(self.container.get_data())
         
+        if (self.carmin_platform):
+            self.db_desc.carmin_platform = self.carmin_platform
                 
         # Validation
         try:
@@ -162,11 +168,14 @@ class DescriptorDataCandidate:
             # An invalid descriptor is allowed on submission only if the 'allow_invalid' argument is set
                 return False
             # Add error message to desc
-            self.db_desc.error = str(exc).replace('\n', '<br>')
+            self.db_desc.execution_status = EXECUTION_STATUS_ERROR
+            self.db_desc.error_message = str(exc).replace('\n', '<br>')
             self.db_desc.last_updated = datetime.date.today()
             self.db_desc.save()
             return True
         
+        self.db_desc.execution_status = EXECUTION_STATUS_UNCHECKED
+
         desc_JSON = json.loads(file.read())
         
         self.db_desc.tool_name = desc_JSON["name"]
@@ -174,13 +183,9 @@ class DescriptorDataCandidate:
             
         self.db_desc.last_updated = datetime.date.today()
         
-        if (self.carmin_platform):
-            self.db_desc.carmin_platform = self.carmin_platform
-        
         self.db_desc.save()
         
-        #create_test_entries(file.name, desc)
-        
+        # Generate all the test profiles.
         desc_entry = DescriptorEntry(self.db_desc)
         desc_entry.generate_tests()
 
@@ -203,8 +208,6 @@ class DescriptorDataCandidate:
         return self.db_desc
 
 
-
-
 class DescriptorEntry:
     
 
@@ -221,79 +224,107 @@ class DescriptorEntry:
         else:
             self.has_carmin_platform = False
     
+
+    def update(self, scheduled=False, force_static_validation=False):
     
-    # Create the test entries of the descriptor
-    def update(self, scheduled=False):
-        print("update triggered")
-
-        # Reset possibly previously set error message.
+        # Reset any possible error messages
         self.db_desc.error_message = ""
+        
+        # Validate the data
 
-        if (self.medium_type != DATA_SELECTOR_URL):
+        if (self.medium_type == DATA_SELECTOR_URL and self.db_desc.automatic_updating == True):
+            # We have to validate URL based descriptors regardless of changes in the the descriptor data.
+            # This is because some of the descriptor's properties might have been changed due to URL errors.
 
+            container_url = DescriptorDataCandidateURLContainer(self.db_desc.data_url)
+            if (container_url.is_medium_erroneous()):
+                
+                # Impossible to communicate properly with the server.
+                # In this case we set an error message.
+                # We however keep the information about the data that was previously successfully fetched from the server.
+                self.db_desc.execution_status = EXECUTION_STATUS_ERROR
+                self.db_desc.error_message = container_url.get_error()
+                self.db_desc.save()
+
+                return False
+            else:
+                data = DescriptorDataCandidate(container_url)
+                md5 = data.get_MD5()
+            
+
+        elif (self.medium_type == DATA_SELECTOR_FILE and force_static_validation == True):
+
+            # A descriptor fetched from a CARMIN servers registers its data through a file.
+            # As the descriptor may be subjected by errors from the CARMIN server that erase previously set execution status and error messages,
+            # it is necessary to validate the descriptor another time to restore the possible properties that were set when the CARMIN server was functional.
+            content = self.db_desc.data_file.read()
+            self.db_desc.data_file.seek(0)
+            data = DescriptorDataCandidate(DescriptorDataCandidateLocalRawContainer(content))
+            # The md5 remains the same as the data as not changed.
+            md5 = self.db_desc.md5
+        else:
+            # We are facing an entry registered through a simple file upload.
+            # No need to validate it, but as part of the update, we have to regenerate new test entries.
             if (scheduled):
                 self.db_desc.execution_status = EXECUTION_STATUS_SCHEDULED
                 self.db_desc.save()
+            else:
+                self.db_desc.execution_status = EXECUTION_STATUS_UNCHECKED               
 
             self.delete_tests()
             self.generate_tests()
 
             return True
-        print("DATA TYPE")
-        print(self.db_desc.data_url == None)
 
-        # Get the data
-        new_data = DescriptorDataCandidate(DescriptorDataCandidateURLContainer(self.db_desc.data_url))
+        # Include the MD5
+        self.db_desc.md5 = md5
+
+        data.validate()
         
-        # Check if MD5 matches the MD5 of current descriptor.
-        new_data.get_MD5()
-        
-        new_data.validate()
-        if (not new_data.is_valid()):
-        
-            self.db_desc.error_message = new_data.get_message()
+        if (not data.is_valid()):
+
+            # Set the error
             self.db_desc.execution_status = EXECUTION_STATUS_ERROR
+            self.db_desc.error_message = data.get_message()
+            
+            # Remove the tool name if one was set.
             self.db_desc.tool_name = ""
-            # Dummy MD5            
-            self.db_desc.md5 = "0"
+            # Remove test entries if any were there previously 
             self.delete_tests()
             self.db_desc.save()
-            
-            return False
-        
-        new_md5 = new_data.get_MD5()
 
+            return False     
+
+        # Past this point, we know the descriptor is valid.
         if (scheduled):
             self.db_desc.execution_status = EXECUTION_STATUS_SCHEDULED
-        
+        else:
+            self.db_desc.execution_status = EXECUTION_STATUS_UNCHECKED
         self.db_desc.save()
-
-        # The new and current descriptors are the same
-        if (new_md5 == self.db_desc.md5):
-            return True
-        
-        # This is a new descriptor
-        JSON_data = get_JSON(new_data.get())
-        
-        # See if the name and version of the descriptor have changed
-        if (self.db_desc.tool_name != JSON_data["name"]):
-            self.db_desc.tool_name = JSON_data["name"]
-            self.db_desc.save()
-        
-        # Replace descriptor file
-        with open(self.db_desc.data_file.file.name, 'w') as fhandle:
-            fhandle.write(new_data.get())
-       
-        # Delete old test entries
         self.delete_tests()
-        
-        # Generate new ones
         self.generate_tests()
-        
-        return True        
+
+        # Addtionaly, when facing a URL based descriptor entry, we have to update its data file.
+        # This is a necessary step for the launching of tests as we will feed the file path of the descriptor to bosh test.
+        if (self.medium_type != DATA_SELECTOR_URL):
+            return True
+
+        # We only need to update the descriptor file if the fetched descriptor happens to be different.
+        # To establish this fact, we do a MD5 comparison.
+        if (md5 != self.db_desc.md5):
+
+            with open(self.db_desc.data_file.file.name, 'wb') as fhandle:
+                print(calculate_MD5(data.get()))
+                fhandle.write(data.get())
+                
+        return True
+
+
         
     
     def generate_tests(self):
+
+
         # Get descriptor as JSON
 
         desc_JSON = json.loads(self.db_desc.data_file.read())
@@ -362,7 +393,7 @@ class DescriptorEntry:
                         assertion.operand1 = "Cannot evaluate: invocation invalid"
                     else:
                         assertion.operand1 = output_files[id]
-
+                    
                     # MD5 reference processing
                     if ouput_assertion_JSON.get('md5-reference') != None:
                         assertion.operand2 = ouput_assertion_JSON['md5-reference']
@@ -374,6 +405,8 @@ class DescriptorEntry:
             
             # We are done filling up the test entry.
 
+        self.db_desc.data_file.seek(0)
+
     def delete_tests(self):
         
         # Clear up all the content related to the entry (except the descriptor entry itself)
@@ -381,6 +414,10 @@ class DescriptorEntry:
         get_tests_query = DescriptorTest.objects.filter(descriptor=self.db_desc)
         tests = get_tests_query.all()
         
+        # We check if tests exist.
+        if (len(tests) == 0):
+            return        
+
         # We iterate on each of those tests to delete the associated assertion entries.
         for test in tests:
             assertions = DescriptorTestAssertion.objects.filter(test=test).delete()
@@ -436,10 +473,15 @@ class DescriptorEntry:
         return results
     
     def delete(self):
-        
+
         # Remove the tests before
         self.delete_tests()
         # Remove the entry itself
+        #print(self.db_desc.tool_name)
+
+        # Remove the file.
+        self.db_desc.data_file.delete()
+
         self.db_desc.delete()
     
     # TODO: Prevent the desc from being deleted.
@@ -485,6 +527,11 @@ class DescriptorEntry:
         # We are done
         return
 
-    def set_inprogress():
-        self.db_desc.execution_status = EXECUTION_STATUS_IN_PROGRESS
+    def set_scheduled(self):
+        self.db_desc.execution_status = EXECUTION_STATUS_SCHEDULED
+        self.db_desc.save()
+
+    def set_erroneous(self, error_message):
+        self.db_desc.execution_status = EXECUTION_STATUS_ERROR
+        self.db_desc.error_message = error_message
         self.db_desc.save()
