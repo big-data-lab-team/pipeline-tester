@@ -3,24 +3,15 @@ from django.contrib.auth.models import User
 from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
 from django.contrib.auth import authenticate, logout
 from django.contrib.auth import login as auth_login
-from django.urls import reverse_lazy, reverse
-from django.views import generic
 from django.shortcuts import render, redirect
 from django_tables2 import RequestConfig
 from .models import Descriptor, EXECUTION_STATUS_UNCHECKED, EXECUTION_STATUS_ERROR, EXECUTION_STATUS_FAILURE, EXECUTION_STATUS_SUCCESS, DescriptorTest, DescriptorTestAssertion
 from .tables import DescriptorTable, DescriptorTestTable
 from .forms import AddDescriptorForm
-import datetime
-from django.http import HttpResponseRedirect, JsonResponse
-import urllib
-import io
-from contextlib import redirect_stdout
+from django.http import HttpResponseRedirect, JsonResponse, HttpResponse, HttpResponseBadRequest
 from .models import ASSERTION_EXITCODE, ASSERTION_OUTPUT_FILE_EXISTS, ASSERTION_OUTPUT_FILE_MATCHES_MD5
 from .models import TEST_STATUS_UNCHECKED, TEST_STATUS_SUCCESS, TEST_STATUS_FAILURE
-from django.http import HttpResponse, HttpResponseBadRequest
 from django.db.models import Q
-from urllib.request import Request, urlopen
-from urllib.error import URLError, HTTPError, ContentTooShortError
 
 import tempfile
 #from boutiques.localExec import LocalExecutor
@@ -38,27 +29,11 @@ from atop.wsgi import run_queue
 
 from django.shortcuts import redirect
 
-
-
-def add_constant_dict(source_dict):
-    source_dict['EXECUTION_STATUS_UNCHECKED'] = EXECUTION_STATUS_UNCHECKED
-    source_dict['EXECUTION_STATUS_ERROR'] = EXECUTION_STATUS_ERROR
-    source_dict['EXECUTION_STATUS_FAILURE'] = EXECUTION_STATUS_FAILURE
-    source_dict['EXECUTION_STATUS_SUCCESS'] = EXECUTION_STATUS_SUCCESS
-
-    source_dict['TEST_STATUS_UNCHECKED'] = TEST_STATUS_UNCHECKED
-    source_dict['TEST_STATUS_SUCCESS'] = TEST_STATUS_SUCCESS
-    source_dict['TEST_STATUS_FAILURE'] = TEST_STATUS_FAILURE
-
-    source_dict['ASSERTION_EXITCODE'] = ASSERTION_EXITCODE
-    source_dict['ASSERTION_OUTPUT_FILE_EXISTS'] = ASSERTION_OUTPUT_FILE_EXISTS
-    source_dict['ASSERTION_OUTPUT_FILE_MATCHES_MD5'] = ASSERTION_OUTPUT_FILE_MATCHES_MD5
     
 
     
 def validate_register(request):
     
-    print(request.body)
     
     try:
         JSON_data = json.loads(request.body)
@@ -78,14 +53,13 @@ def validate_register(request):
         
     return JsonResponse(response) 
 
-    
 
 def get_context_home(request):
         
     # Get descriptors that are both (1) set as public and (2) belong to the logged user (if logged)
     user = request.user
     if (user.is_authenticated):
-        print("user is authed")
+        #print("user is authed")
         user_id = User.objects.get(pk=request.user.id)
         descs = Descriptor.objects.filter(Q(user_id=user_id) | Q(is_public=True)).all()
     else:
@@ -109,7 +83,6 @@ def get_context_home(request):
     form_login = AuthenticationForm(auto_id='id_login_%s')
     
     context = {'table': desc_table, 'test_tables': test_tables, 'form': form, 'form_signup': form_signup, 'form_login': form_login}
-    add_constant_dict(context)
     return context
    
    
@@ -124,16 +97,7 @@ def home_redirect(request, message_content=None):
     if (message_content != None):
         context["message"] = message_content
     return render(request, 'home.html', context)
-   
-    
-def home(request, test=None):
-    
-    print(test)
-    
-    context = get_context_home(request)
-    return render(request, 'home.html', context)
-
-
+ 
 
 VALIDATION_SUCCESS = 0
 VALIDATION_FAILURE = 1
@@ -141,13 +105,6 @@ DATA_SELECTOR_FILE = 0
 DATA_SELECTOR_URL = 1
 DATA_SELECTOR_CARMIN = 2
 
-
-class SignUp(generic.CreateView):
-
-    
-    form_class = UserCreationForm
-    success_url = reverse_lazy('login')
-    template_name = 'signup2.html'
 
     
 def jsonize_validation(data):
@@ -170,17 +127,17 @@ def register(request):
     time.sleep(2)
     
     if request.method == "POST":
-        print(request.POST)
+        #print(request.POST)
         form = UserCreationForm(request.POST)
         if (form.is_valid()):
             form.save()
             response = {"code": VALIDATION_SUCCESS}
-        else:
-            print(form.is_valid())
-            print(form.errors.as_data())
-            print(jsonize_validation(form.errors.as_data()))
+        #else:
+            #print(form.is_valid())
+            #print(form.errors.as_data())
+            #print(jsonize_validation(form.errors.as_data()))
             
-        print(form.errors.as_data())
+        #print(form.errors.as_data())
         
         response = jsonize_validation(form.errors.as_data())
         
@@ -255,63 +212,7 @@ def delete(request):
     else:
         return HttpResponseBadRequest()
 
-    
-'''
-def validate(request):
-
-    if (request.method != "POST") and (request.method != "GET"):
-        return HttpResponseBadRequest()    
-
-    response = {}
-    set_code = lambda data_candidate: VALIDATION_SUCCESS if data_candidate.is_valid() else VALIDATION_FAILURE
-    
-    if request.method == "GET":
-        # A GET may refer to two different things: An URL poiting toward a descriptor, or informations about a CARMIN platoform
-        # We have to review the 'type' key to make the differentiation
-        if (request.GET.get("type") == str(DATA_SELECTOR_URL)):
-            
-            url = request.GET.get("url")
-            if (not url):
-                return HttpResponseBadRequest()
-                
-            data = DescriptorDataCandidate(DescriptorDataCandidateURLContainer(url))
-            data.validate()
-            response["code"] = set_code(data)
-            response["message"] = data.get_message()
-            return JsonResponse(response)
-           
-            #return JsonResponse(validate_descriptor(DATA_SELECTOR_URL, request.GET.get("url")))
-        if (request.GET.get("type") == str(DATA_SELECTOR_CARMIN)):
-            
-            url = request.GET.get("url")
-            apikey = request.GET.get("apikey")
-            if ((not url) or (not apikey)):
-                return HttpResponseBadRequest()
-            
-            data = CarminPlatformCandidate(url, apikey)
-            data.validate()
-            response["code"] = set_code(data)
-            response["message"] = data.get_message()
-            return JsonResponse(response)
-            #return JsonResponse(validate_descriptor(DATA_SELECTOR_CARMIN, data))
-        else:
-            return HttpResponseBadRequest()
-           
-    if (request.method == "POST"):
-        # If the request method is a POST, then we know for sure that we are dealing with a file upload
-        
-        content = request.body
-        data = DescriptorDataCandidate(DescriptorDataCandidateLocalRawContainer(content))
-        data.validate()
-        response["code"] = set_code(data)
-        response["message"] = data.get_message()
-        print(data.get_message())
-        return JsonResponse(response)
-        
-        #return JsonResponse(validate_descriptor(DATA_SELECTOR_FILE, request.body))
-'''
-
-
+ 
 
 def validate(request):
 
@@ -361,7 +262,7 @@ def validate(request):
         data.validate()
         response["code"] = set_code(data)
         response["message"] = data.get_message()
-        print(data.get_message())
+        #print(data.get_message())
         return JsonResponse(response)
         
         #return JsonResponse(validate_descriptor(DATA_SELECTOR_FILE, request.body))
@@ -393,7 +294,7 @@ def home(request):
 
         user_id = User.objects.get(pk=request.user.id)
 
-        print("type is" + str(type))
+        #print("type is" + str(type))
         
         if type == DATA_SELECTOR_CARMIN:
             
@@ -413,7 +314,6 @@ def home(request):
             is_public = form.cleaned_data["is_public"]
             data = DescriptorDataCandidate(DescriptorDataCandidateLocalFileContainer(file), is_public=is_public, user=user_id)
             if (data.validate() == False):
-                print("not working")
                 return render(request, '/')
             data.submit()
                      
@@ -427,7 +327,7 @@ def home(request):
                 return render(request, '/')
             data.submit()
 
-        print(form.errors)
+        #print(form.errors)
                  
         return HttpResponseRedirect("/")
 
@@ -448,41 +348,6 @@ def log_out(request):
     logout(request)
     return redirect(request.META['HTTP_REFERER'])
     
-        
-
-
-'''
-    # Fetch users's descriptors.
-    db_descs = Descriptor.objects.all().filter(user_id=user)
-    descs = []    
-    for db_desc in db_descs:
-        descs.append(DescriptorEntry(db_desc)) 
-
-    #TODO: Atomically indicate that the user's descriptors are currently being updated.
-
-    # Run run_test function for each of those tests.
-    for desc in descs:
-        
-        desc.test()
-        
-    return redirect(request.META['HTTP_REFERER'])
-'''
-'''
-
-    
-def validate_descriptor(descriptor_filepath):
-    
-    # Attempt to validate descriptor
-    # If validation fails, return tuple with first element indicaiting failure.
-    try:
-        bosh.validate([descriptor_filepath])
-    except e:
-        return (False, e.message)
-    
-    return (True, None)
-'''
-
-
 
 def get_assertion_typestring(type):
 
