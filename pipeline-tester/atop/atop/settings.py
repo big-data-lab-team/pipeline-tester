@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/1.11/ref/settings/
 """
 
 import os
+import sys
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -126,3 +127,5 @@ STATIC_URL = '/static/'
 #DJANGO_TABLES2_TEMPLATE = 'django_tables2/bootstrap-responsive.html'
 
 ACCOUNT_ACTIVATION_DAYS = 7 # One-week activation window; you may, of course, use a different value.
+
+TESTING = sys.argv[1:2] == ['test']
