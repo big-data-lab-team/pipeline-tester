@@ -1,6 +1,0 @@
-usage: exampleTool1.py [-h] [-c CONFIG_FILE]
-                       [-i STRING_INPUT [STRING_INPUT ...]]
-                       [-l INT_INPUT [INT_INPUT ...]] [-f] [-n NUMBER]
-                       [-e ENUM_INPUT]
-                       file_input
-exampleTool1.py: error: File not found: ./setup.py
