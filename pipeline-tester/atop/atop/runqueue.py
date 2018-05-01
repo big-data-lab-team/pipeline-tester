@@ -28,14 +28,15 @@ class RunQueue:
             return (False, message)
         
         # Then:
-        print("ONE")
         self.prepare(user)
 
         self.serving_lock.release()        
 
+
         # Acquire semaphore
         self.lock.acquire(True)
-       
+
+
         # Add user to queue
         self.queue.put(user)
        
@@ -51,18 +52,18 @@ class RunQueue:
        
    
     def prepare(self, user):
-        
+
         descriptors = []
         
         # Update and get all the carmin platforms
         get_platforms = CarminPlatform.objects.filter(user=user)
         db_carmin_platforms = get_platforms.all()
-        
+
         if (db_carmin_platforms):
             for db_carmin_platform in db_carmin_platforms:
                 carmin_platform = carmin.CarminPlatformEntry(db_carmin_platform)
-                carmin_platform.update()
-            
+                carmin_platform.update(scheduled=True)
+
         # Update and get all the URL specified descriptors
         get_url_based_descriptors = Descriptor.objects.filter(automatic_updating=True, user_id=user)
         url_based_descriptors = get_url_based_descriptors.all()
@@ -70,14 +71,11 @@ class RunQueue:
         if (url_based_descriptors):
             for db_desc in url_based_descriptors:
                 desc = desc_utils.DescriptorEntry(db_desc)
-                print(db_desc.tool_name)                
                 desc.update(scheduled=True)
 
         # Get local descriptors
-        get_regular_descriptors = Descriptor.objects.filter()
+        get_regular_descriptors = Descriptor.objects.filter(Q(automatic_updating=False) & Q(carmin_platform=None))
         regular_descriptors = get_regular_descriptors.all()
-        print("regular descriptors:")        
-        print(regular_descriptors)        
 
         if (regular_descriptors):
             for db_desc in regular_descriptors:
@@ -89,19 +87,25 @@ class RunQueue:
        
         while 1:
             # If the queue contains a user instance
-            if (not self.queue.empty()):
-                # Pop it
-                user = self.queue.get()
-               
-                # We get the descriptors that belong to the user.
-                # In addition to that we also exclude descriptors that have been marked as erroneous during the preparation part.
-                get_descriptors = Descriptor.objects.filter(Q(user_id=user) | Q(execution_status=EXECUTION_STATUS_SCHEDULED))
-                db_descs = get_descriptors.all()
-                
-                for db_desc in db_descs:
-                    desc = desc_utils.DescriptorEntry(db_desc)
-                    desc.test()
+            self.serve()
+
                     
-               
+
+    def serve(self):
+
+        if (not self.queue.empty()):
+            # Pop it
+            user = self.queue.get()
+           
+            # We get the descriptors that belong to the user.
+            # In addition to that we also exclude descriptors that have been marked as erroneous during the preparation part.
+            get_descriptors = Descriptor.objects.filter(Q(user_id=user) & Q(execution_status=EXECUTION_STATUS_SCHEDULED))
+            db_descs = get_descriptors.all()
+            #for db_desc in db_descs:
+            #   print("n:" + db_desc.tool_name)
+            
+            for db_desc in db_descs:
+                desc = desc_utils.DescriptorEntry(db_desc)
+                desc.test()        
                     
                 
