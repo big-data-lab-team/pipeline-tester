@@ -15,8 +15,6 @@ os.environ.setdefault("DJANGO_SETTINGS_MODULE", "atop.settings")
 
 application = get_wsgi_application()
 
-print("new")
-
 from threading import Thread
 from atop.runqueue import RunQueue
 
