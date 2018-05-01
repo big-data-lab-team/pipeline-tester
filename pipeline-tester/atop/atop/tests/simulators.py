@@ -277,36 +277,6 @@ def carmin_simulation_dispatcher(request, carmin_server, method=None, pipeline_i
         
     return HttpResponseBadRequest()
         
-        
-
-#from atop.common import HTTPGetter
-
-
-import atop.carmin as carmin
-def test(request):
-
-    carmin_server_obj.create_server("carmin_serv", ["123"])
-    carmin_server_obj.add_state("carmin_serv", None, CarminSimulatorState(CarminSimulatorState.SERVER_STATUS_VALID, 1, [VALID_SUCC_DESC_A]))
-    carmin_server_obj.add_state("carmin_serv", None, CarminSimulatorState(CarminSimulatorState.SERVER_STATUS_UNREACHABLE, 1, [VALID_SUCC_DESC_A]))
-    carmin_server_obj.add_state("carmin_serv", None, CarminSimulatorState(CarminSimulatorState.SERVER_STATUS_NOT_CARMIN, 1, [VALID_SUCC_DESC_A]))
-
-
-    prefix = "http://127.0.0.1:8000/carmin_simulation/" + "carmin_serv"
-
-    carmin_data = carmin.CarminPlatformCandidate(prefix, "123")
-    carmin_data.submit()
-    db = carmin_data.get_db() 
-
-    #print("validated:" + str(carmin_data.is_valid()))
-
-    #my_getter(prefix + "/platform")
-    #my_getter(prefix + "/pipelines", "123")
-    #my_getter(prefix + "/pipelines/pipeline_0/boutiquesdescriptor", "123")
-    
-    #my_getter(prefix + "/platform")
-
-    #my_getter(prefix + "/platform")
-    return HttpResponse("")
 
     
         
