@@ -7,5 +7,6 @@ setup(
     install_requires=[
         'django',
         'django-tables2',
+        'boutiques',
     ]
 )
