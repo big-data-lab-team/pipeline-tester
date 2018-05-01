@@ -1,13 +1,16 @@
 # models.py
 from django.db import models
 from django.contrib.auth.models import User
-
+from atop.settings import TESTING
 
 
 
 def user_directory_path(instance, filename):
     # file will be uploaded to MEDIA_ROOT/user_<id>/<filename>
-    return 'user_data/user_{0}/{1}'.format(instance.user_id.id, filename)
+    if (TESTING):
+        return 'user_data_testing/user_{0}/{1}'.format(instance.user_id.id, filename)
+    else:
+        return 'user_data/user_{0}/{1}'.format(instance.user_id.id, filename)
 
 class CarminPlatform(models.Model):
     root_url = models.URLField(default="")
