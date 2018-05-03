@@ -263,6 +263,11 @@ class DescriptorEntry:
                     data = DescriptorDataCandidate(container_url)
                     md5 = data.get_MD5()
                     if (md5 != self.db_desc.md5 or erroneous_db):
+                        # New data
+                        
+                        with open(self.db_desc.data_file.file.name, 'wb') as fhandle:
+                            fhandle.write(data.get())
+                        self.db_desc.save()
 
                         data.validate()
                         if (not data.is_valid()):
