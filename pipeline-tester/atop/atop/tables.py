@@ -31,7 +31,7 @@ class DescriptorTable(tables.Table):
         return ''
     
     def render_actions(self, record):
-        return format_html('<div style="vertical-align: middle;"><a href="#"><center><div class="action-delete"  delete-id="{}"><i class="fas fa-trash fa-lg fa-fw"></i></div></center></a></div>', record.pk)
+        return format_html('<div style="vertical-align: middle;"><a href="#"><center><div class="action-delete"  delete-id="{}" delete-type="descriptor"><i class="fas fa-trash fa-lg fa-fw"></i></div></center></a></div>', record.pk)
     
     def get_record_color(self, record):
         
