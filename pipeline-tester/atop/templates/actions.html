@@ -1,13 +1,16 @@
 {% if user.is_authenticated %}
-<button type="button" class="btn btn-dark btn-lg btn-block" data-toggle="modal" data-target="#exampleModalCenter">Add</button>
-<button type="button" class="btn btn-dark btn-lg btn-block" onclick="location.href = '/run_tests/'">Run tests</button>
-<button type="button" class="btn btn-dark btn-lg btn-block" onclick="location.href = '/logout/'">Log out</button>
+<button type="button" class="btn btn-info btn-outline btn-block" data-toggle="modal" data-target="#modalAdd">Add</button>
+<button type="button" class="btn btn-info btn-outline btn-block" onclick="location.href = '/run_tests/'">Run tests</button>
+<button type="button" class="btn btn-info btn-outline btn-block" data-toggle="modal" data-target="#modalCarmin">CARMIN Management</button>
+<button type="button" class="btn btn-warning btn-outline btn-block" onclick="location.href = '/logout/'">Log out</button>
 
-<div class="modal fade" id="exampleModalCenter" tabindex="-1" role="dialog" aria-labelledby="exampleModalCenterTitle" aria-hidden="true">
+{% include "./carmin_management.html" %}
+
+<div class="modal fade" id="modalAdd" tabindex="-1" role="dialog" aria-labelledby="modalAddCenterTitle" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered" role="document">
     <div class="modal-content">
       <div class="modal-header">
-        <h5 class="modal-title" id="exampleModalLongTitle">Add</h5>
+        <h5 class="modal-title" id="modalAddLongTitle">Add</h5>
         <button type="button" class="close" data-dismiss="modal" aria-label="Close">
           <span aria-hidden="true">&times;</span>
         </button>
@@ -26,8 +29,8 @@
 
 
 {% else %}
-<button type="button" class="btn btn-dark btn-lg btn-block" data-toggle="modal" data-target="#modalSignup">Sign-up</button>
-<button type="button" class="btn btn-dark btn-lg btn-block" data-toggle="modal" data-target="#modalLogin">Login</button>
+<button type="button" class="btn btn-info btn-outline btn-block" data-toggle="modal" data-target="#modalSignup">Sign-up</button>
+<button type="button" class="btn btn-info btn-outline btn-block" data-toggle="modal" data-target="#modalLogin">Login</button>
 
 
 <div class="modal fade" id="modalSignup" tabindex="-1" role="dialog" aria-labelledby="modalSignupCenterTitle" aria-hidden="true">
