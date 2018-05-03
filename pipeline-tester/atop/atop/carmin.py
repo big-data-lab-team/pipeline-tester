@@ -20,7 +20,7 @@ class CarminPlatformCandidate:
         self.raw_descriptors = []
         self.descriptors = []
         self.user = user
-        self.is_public = False
+        self.is_public = is_public
 
         self.is_carmin_online = False
         self.descriptor_count = 0

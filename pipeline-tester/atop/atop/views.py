@@ -13,7 +13,7 @@ from atop.models import ASSERTION_EXITCODE, ASSERTION_OUTPUT_FILE_EXISTS, ASSERT
 from django.db.models import Q
 
 
-from atop.carmin import CarminPlatformCandidate
+from atop.carmin import CarminPlatformCandidate, CarminPlatformEntry
 from atop.descriptor import DescriptorDataCandidate, DescriptorDataCandidateURLContainer, DescriptorDataCandidateLocalFileContainer, DescriptorDataCandidateLocalRawContainer, DescriptorEntry
 from atop.wsgi import run_queue
 
@@ -113,8 +113,6 @@ def jsonize_validation(data):
     
     
 def register(request):
-    import time
-    time.sleep(2)
     
     if request.method == "POST":
         #print(request.POST)
@@ -145,8 +143,6 @@ def register(request):
     
     
 def login(request):
-    import time
-    time.sleep(2)
 
     if request.method == "POST":
         form = AuthenticationForm(data=request.POST)
@@ -251,7 +247,7 @@ def delete(request):
                 messages.add_message(request, messages.INFO, 'Could not delete carmin platform: user does not own carmin platform entry')
                 return redirect("/")
             
-            carmin = CarminEntry(db_car)
+            carmin = CarminPlatformEntry(db_car)
             carmin.delete()
 
             return redirect("/")
@@ -328,8 +324,6 @@ def validate(request):
 
 
 def home(request):
-
-
 
     if request.method == "GET":
         
