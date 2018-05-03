@@ -15,6 +15,9 @@ python:
 - nightly
 
 before_install:
+- git clone https://github.com/boutiques/boutiques.git
+- docker build -t boutiques/example1:test ./boutiques/tools/python/boutiques/schema/examples/example1
+- rm boutiques -Rf
 - cd ${TRAVIS_BUILD_DIR}
 
 install:
