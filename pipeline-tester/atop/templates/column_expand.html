@@ -1,3 +1,4 @@
 {% load django_tables2 %}
-
-<button class="btn btn-secondary" data-toggle="collapse" data-target="#test-panel-{{ record.id }}" onclick="return expand_text_change(this)"><i class="fas fa-plus fa-sm fa-fw" style="color:#666"></i></button>
+<button class="btn btn-secondary" data-toggle="collapse" data-target="#test-panel-{{ record.id }}" mode="plus" onclick="return expand_text_change(this)">
+   <div class="expand-button"><i class="fas fa-plus fa-sm fa-fw" style="color:#666"></i></div>
+</button>
