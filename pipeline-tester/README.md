@@ -8,7 +8,7 @@ To launch the application, you should type in the following command (from this d
 `python atop/manage.py runserver`
 ## Testing
 To test this web application, you may do it by typing (from this directory):\
-`python atop/manage.py test`
+`python atop/manage.py test atop`
 
 (NOTE: you may need administrative rights to perform the testing correctly)
 
