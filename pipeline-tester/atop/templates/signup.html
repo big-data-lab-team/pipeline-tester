@@ -1,258 +1,66 @@
 <script>
-$(document).ready(function() {
-
-    // Invalid username
-        // Invalid characters: special characters, too long, too short
-        // Username taken
-    // Invalid password 
-    
-   const FIELD_VALIDATOR_VALIDATION_SUCESS = 0
-   const FIELD_VALIDATOR_VALIDATION_FAILURE = 1
-   
-   const FIELD_VALIDATOR_STATUS_IDLE = 0
-   const FIELD_VALIDATOR_STATUS_LOADING = 1
-   const FIELD_VALIDATOR_STATUS_SUCCESS = 2
-   const FIELD_VALIDATOR_STATUS_FAILURE = 3
-   
-   const FIELD_VALIDATOR_ICON_LOADING = 0;
-   const FIELD_VALIDATOR_ICON_SUCCESS = 1;
-   const FIELD_VALIDATOR_ICON_FAILURE = 2;
-   const FIELD_VALIDATOR_ICON_IDLE = 3;
-    
-    
-    function AjaxField(fieldId, msgId, ajaxId) {
-        
-        this.fieldId = fieldId;
-        this.hField = "#" + fieldId;
-        this.msgId = msgId;
-        this.hMsgId = "#" + msgId;
-        this.ajaxId = ajaxId;
-        this.valid = false;
-        var that = this;
-        $(this.hMsgId).hide();
-                        
-                
-        this.setSuccess = function() {
-            this.valid = true;
-            $(this.hMsgId).hide();
-        }
-
-        this.setFailure = function() {
-            this.valid = false;
-        }
-        
-        this.reset = function() {
-            //$(this.hMsgId).html("");
-            
-            this.messages = [];
-                    
-            this.valid = false;
-        }
-                
-        
-        this.addMessages = function(messages) {
-            
-            var htmlMessages = "<ul>";
-            for (var i = 0; i < messages.length; i++) {
-                htmlMessages += "<li>" + messages[i] + "</li>";
-            }
-            htmlMessages += "</ul>";
-            $(this.hMsgId).html(htmlMessages);
-            
-            if ($(this.hMsgId).is(":visible") == false) {
-                $(this.hMsgId).show();
-            };
-        }
-        
-        this.isValid = function() {
-            return this.valid;
-        }
-        
-        this.getAjaxId = function() {
-            return this.ajaxId;
-        }
-        
-        this.getValue = function() {
-            return $(this.hField).val();
-        }
-         
-    }
-    
-    function AjaxFieldForm(fields, url, form, statusIcon, redirectionUrl) {
-    
-        this.fields = fields;
-        this.url = url;
-        this.form = form;
-        this.hForm = "#" + form;
-        this.statusIcon = statusIcon;
-        this.hStatusIcon = "#" + statusIcon;
-        this.redirectionUrl = redirectionUrl;
-        this.FORM_SUCCESS = 0;
-        this.FORM_FAILURE = 1;
-        var that = this;
-    
-        this.csrfSafeMethod = function(method) {
-            // these HTTP methods do not require CSRF protection
-            return (/^(GET|HEAD|OPTIONS|TRACE)$/.test(method));
-        }
-
-
-        this._reset = function() {
-            for (i = 0; i < this.fields.length; i++) {
-                this.fields[i].reset();
-            }
-        }
+   $(document).ready(function() {
        
-        this._loadingStart = function() {
-            /*
-            for (i = 0; i < this.fields.length; i++) {
-                this.fields[i].setLoading();
-            }
-            */
-            $(this.hStatusIcon).show();
-            
-            
-        }
-        
-        this._loadingStop = function() {
-
-            $(this.hStatusIcon).hide();
-            
-        }
-        
-        this._setSuccessful = function() {
-        
-            $(this.hStatusIcon).html('<i class="fas fa-check fa-lg fa-fw" style="color: #28a745"></i>');
-            window.location.replace(this.redirectionUrl);
-            
-        }
-        
-        this._jsonize = function() {
-            var jsonData = {};
-            for (i = 0; i < this.fields.length; i++) {
-                field = this.fields[i];
-                jsonData[field.getAjaxId()] = field.getValue();
-            }
-            return jsonData;
-        }
-        
-        
-        this.validate_and_submit = function() {
-
-            this._reset();
-            this._loadingStart();
-                        
-            var jsonInput = this._jsonize();
-                        
-            var csrftoken = jQuery("[name=csrfmiddlewaretoken]").val();
-            ajaxRequest = {
-                beforeSend: function(xhr, settings) {
-                    if (!that.csrfSafeMethod(settings.type) && !this.crossDomain) {
-                        xhr.setRequestHeader("X-CSRFToken", csrftoken);
-                        //xhr.setRequestHeader("Content-Type", content.type);
-                    }
-                },
-                dataType: "text",
-                type: "POST",
-                data:  $(that.hForm).serialize(),
-                url: this.url,
-                processData: false,
-                success: function (data) {
-                    jsonData = JSON.parse(data);
-                    // Parse all the possible error messages.
-                    for (i = 0; i < that.fields.length; i++) {
-                        var field = that.fields[i];
-                        var id = field.getAjaxId();
-                        if (id in jsonData) {
-                            that._loadingStop();
-                            var messages = jsonData[id];
-                            field.setFailure();
-                            field.addMessages(messages);
-                        }
-                        else {
-                            field.setSuccess();
-                        }
-                    }
-                        
-                    if (jsonData['code'] == that.FORM_SUCCESS) {
-                        that._setSuccessful();                        
-                    }
-                    return;
-                },
-                error: function (data) {
-                    alert(data);
-                }
-            };
-            $.ajax(ajaxRequest);         
-        }
-    
-    }
-
-    
-    var field_username = new AjaxField("id_username", "username_msg", "username");
-    var field_password1 = new AjaxField("id_password1", "password1_msg", "password1");
-    var field_password2 = new AjaxField("id_password2", "password2_msg", "password2");
-    
-    var fields = [field_username, field_password1, field_password2];
-    
-    ajax_form = new AjaxFieldForm(fields, "/register/", "form_register", "statusIconOverlay", "/register/");    
-    
-    
-});
-
+       var field_username = new AjaxField("id_username", "username_msg", "username");
+       var field_password1 = new AjaxField("id_password1", "password1_msg", "password1");
+       var field_password2 = new AjaxField("id_password2", "password2_msg", "password2");
+       
+       var fields = [field_username, field_password1, field_password2];
+       
+       ajax_form = new AjaxFieldForm(fields, "/register/", "form_register", "statusIconOverlay", "/register/");    
+       
+       
+   });
+   
 </script>
-  
-  <form method="post" role="form" id="form_register">
-    {% csrf_token %}
-  <div class="form-group row">
-        <div class="col-md-12">
-            <label for="id_username">Enter a username:</label>
-            <div class="input-group">
-                <span class="input-group-addon"><i class="fas fa-user fa-sm fa-fw"></i></span>
-                {{ form_signup.username }}
-                <script type="text/javascript">
-                    $('#id_username').addClass("form-control");
-                    $('#id_username').attr("placeholder", "Enter a username");
-                </script>
-                
-            </div>
-       </div>
-  </div>
-  <div class="alert alert-danger" role="alert" id="username_msg"></div>
-
-  <div class="form-group row">
+<form method="post" role="form" id="form_register">
+   {% csrf_token %}
+   <div class="form-group row">
       <div class="col-md-12">
-            <label for="id_password1">Enter a password:</label>
-            <div class="input-group">
-                <span class="input-group-addon"><i class="fas fa-lock fa-sm fa-fw"></i></span>
-                {{ form_signup.password1 }}
-                <script type="text/javascript">
-                    $('#id_password1').addClass("form-control");
-                    $('#id_password1').attr("placeholder", "Enter a password");
-                </script>               
-                
-            </div>
-       </div>
-  </div>
-  <div class="alert alert-danger" role="alert" id="password1_msg"></div>
-  
- <div class="form-group row">
+         <label for="id_username">Enter a username:</label>
+         <div class="input-group">
+            <span class="input-group-addon"><i class="fas fa-user fa-sm fa-fw"></i></span>
+            {{ form_signup.username }}
+            <script type="text/javascript">
+               $('#id_username').addClass("form-control");
+               $('#id_username').attr("placeholder", "Enter a username");
+            </script>
+         </div>
+      </div>
+   </div>
+   <div class="alert alert-danger" role="alert" id="username_msg"></div>
+   <div class="form-group row">
       <div class="col-md-12">
-            <label for="id_password2">Confirm your password:</label>
-            <div class="input-group">
-                <span class="input-group-addon"><i class="fas fa-lock fa-sm fa-fw"></i></span>
-                {{ form_signup.password2 }}
-                <script type="text/javascript">
-                    $('#id_password2').addClass("form-control");
-                    $('#id_password2').attr("placeholder", "Confirm your password");
-                </script>               
-                
-            </div>
-       </div>
-  </div>
-  <div class="alert alert-danger" role="alert" id="password2_msg"></div>
-  </form>
-  <center><span id="statusIconOverlay"><i  class="fas fa-spinner fa-pulse fa-lg fa-fw" style="position: relative; vertical-align: middle; top: 10px;"></i></span><center>
-  <script type="text/javascript">
-      $('#statusIconOverlay').hide();
-  </script>
+         <label for="id_password1">Enter a password:</label>
+         <div class="input-group">
+            <span class="input-group-addon"><i class="fas fa-lock fa-sm fa-fw"></i></span>
+            {{ form_signup.password1 }}
+            <script type="text/javascript">
+               $('#id_password1').addClass("form-control");
+               $('#id_password1').attr("placeholder", "Enter a password");
+            </script>               
+         </div>
+      </div>
+   </div>
+   <div class="alert alert-danger" role="alert" id="password1_msg"></div>
+   <div class="form-group row">
+      <div class="col-md-12">
+         <label for="id_password2">Confirm your password:</label>
+         <div class="input-group">
+            <span class="input-group-addon"><i class="fas fa-lock fa-sm fa-fw"></i></span>
+            {{ form_signup.password2 }}
+            <script type="text/javascript">
+               $('#id_password2').addClass("form-control");
+               $('#id_password2').attr("placeholder", "Confirm your password");
+            </script>               
+         </div>
+      </div>
+   </div>
+   <div class="alert alert-danger" role="alert" id="password2_msg"></div>
+</form>
+<center>
+<span id="statusIconOverlay"><i  class="fas fa-spinner fa-pulse fa-lg fa-fw" style="position: relative; vertical-align: middle; top: 10px;"></i></span>
+<center>
+<script type="text/javascript">
+   $('#statusIconOverlay').hide();
+</script>
