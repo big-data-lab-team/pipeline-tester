@@ -1,0 +1,68 @@
+<style>
+   #carmin_management_box {
+   height:350px;
+   overflow-y: scroll;
+   background-color: #f8f9fa;
+   }
+</style>
+<div class="modal fade" id="modalCarmin" tabindex="-1" role="dialog" aria-labelledby="modalCarminCenterTitle" aria-hidden="true">
+<div class="modal-dialog modal-dialog-centered modal-lg" role="document">
+<div class="modal-content">
+<div class="modal-header">
+   <h5 class="modal-title" id="modalCarminLongTitle">Manage CARMIN platforms</h5>
+   <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+   <span aria-hidden="true">&times;</span>
+   </button>
+</div>
+<div class="modal-body">
+   <div id="carmin_management_box" class="card card-body" style="padding: 5px;">
+      {% for carmin_server in carmin_servers %}
+      {% if carmin_server.error_message == "" %}
+      <div class="alert alert-success">
+         <div class="row">
+            <div class="col-1" style="display: flex; align-items: center;">
+               <i class="fas fa-check"></i>
+               {% else %}
+               <div class="alert alert-danger">
+                  <div class="row">
+                     <div class="col-1" style="display: flex; align-items: center;">
+                        <i class="fas fa-times"></i>
+                        {% endif %}
+                     </div>
+                     <div class="col-7">
+                        {{ carmin_server.name }}
+                     </div>
+                     <div class="col-3" style="display: flex; align-items: center;">
+                        {% if carmin_server.error_message != "" %}
+                        <a data-toggle="collapse" href="#carmin-management-error-console-{{ carmin_server.id }}" aria-expanded="false" aria-controls="carmin-management-error-console-{{ carmin_server.id }}">View error</a>
+                        {% endif %}
+                     </div>
+                     <div class="col-1" style="display: flex; align-items: center;">
+                        {% if carmin_server.error_message != "" %}
+                        <a href="#">
+                           <div class="action-delete"  delete-id="{{ carmin_server.id }}" delete-type="carmin platform"><i class="fas fa-trash" ></i></div>
+                        </a>
+                        {% endif %}
+                     </div>
+                  </div>
+                  {% if carmin_server.error_message != "" %}
+                  <div class="collapse" id="carmin-management-error-console-{{ carmin_server.id }}">
+                     <div style="margin-top:15px"></div>
+                     <div class="card-body code"  style="width: 100%; background-color: #20282c; min-height:120px; padding: 2px;">
+                        <div class="code-container">
+                           <pre><code><span class="code-span">{{ carmin_server.error_message|linebreaksbr }}</span></code></pre>
+                        </div>
+                     </div>
+                  </div>
+                  {% endif %}
+               </div>
+               {% endfor %}
+            </div>
+         </div>
+         <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+         </div>
+      </div>
+   </div>
+</div>
+

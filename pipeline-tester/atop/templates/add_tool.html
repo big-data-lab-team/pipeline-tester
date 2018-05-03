@@ -1,0 +1,83 @@
+{% csrf_token %}
+<div class="container">
+   <form action="" enctype="multipart/form-data" method="post" role="form" id="form1">
+      {% csrf_token %}
+      <div id="tabs">
+         <ul class="nav nav-tabs" role="tablist">
+            <li class="nav-item"><a class="nav-link active" data-toggle="tab" href="#tabs-1" role="tab" id="tab-computer"><i class="fas fa-upload fa-lg fa-fw"></i> Computer</a></li>
+            <li class="nav-item"><a class="nav-link" data-toggle="tab" href="#tabs-2" role="tab" id="tab-web"><i class="fas fa-globe fa-lg fa-fw"></i> Web</a></li>
+            <li class="nav-item"><a class="nav-link" data-toggle="tab" href="#tabs-3" role="tab" id="tab-carmin"><i class="fas fa-server fa-lg fa-fw"></i> CARMIN</a></li>
+         </ul>
+         <div class="tab-content">
+            <div id="tabs-1" class="tab-pane active" role="tabpanel">
+               <div class="card-block">
+                  <!--<label class="custom-file"> -->
+                  <div class="p-1">
+                     <label class="custom-file">
+                     {{ form.data_file }}
+                     <span class="custom-file-control"></span>
+                     </label>
+                  </div>
+                  <div class="p-1">
+                     <div class="alert alert-danger" role="alert" id="msg_file"> 
+                        {% for error in form.data_file.errors %}
+                        {{ error }}
+                        {% endfor %}
+                     </div>
+                  </div>
+                  <!-- <span class="custom-file-control"></span> -->
+                  <!--</label>-->
+               </div>
+            </div>
+            <div id="tabs-2" class="tab-pane" role="tabpanel">
+               <div class="card-block">
+                  <div class="form-group">
+                     <label for="id_data_url">URL pointing towards a descriptor</label>
+                     {{  form.data_url }}
+                  </div>
+                  <div class="form-group">
+                     <div class="alert alert-danger" role="alert" id="msg_url"> 
+                        {% for error in form.data_url.errors %}
+                        {{ error }}
+                        {% endfor %}
+                     </div>
+                  </div>
+                  <div class="form-group">
+                     <div class="form-check">
+                        {{ form.automatic_updating }}
+                        <label class="form-check-label" for="id_automatic_updating">
+                        Automatic updating
+                        </label>
+                     </div>
+                  </div>
+               </div>
+            </div>
+            <div id="tabs-3" class="tab-pane" role="tabpanel">
+               <div class="card-block">
+                  <div class="form-group">
+                     <label for="id_data_carmin_platform_url">URL pointing towards a CARMIN platform</label>
+                     {{  form.data_carmin_platform_url }}
+                  </div>
+                  <div class="form-group">
+                     <label for="id_data_carmin_platform_apikey">API-key</label>
+                     {{  form.data_carmin_platform_apikey }}
+                  </div>
+                  <div class="form-group">
+                     <div class="alert alert-danger" role="alert" id="msg_carmin"> 
+                        {% for error in form.id_data_carmin_platform_apikey.errors %}
+                        {{ error }}
+                        {% endfor %}
+                     </div>
+                  </div>
+               </div>
+            </div>
+         </div>
+      </div>
+      <div class="top1">
+         <div class="form-check">
+            {{  form.is_public }}
+            <label class="form-check-label" for="id_is_public">Public</label>
+         </div>
+      </div>
+   </form>
+</div>

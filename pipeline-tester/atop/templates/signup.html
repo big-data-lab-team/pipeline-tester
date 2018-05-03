@@ -1,0 +1,66 @@
+<script>
+   $(document).ready(function() {
+       
+       var field_username = new AjaxField("id_username", "username_msg", "username");
+       var field_password1 = new AjaxField("id_password1", "password1_msg", "password1");
+       var field_password2 = new AjaxField("id_password2", "password2_msg", "password2");
+       
+       var fields = [field_username, field_password1, field_password2];
+       
+       ajax_form = new AjaxFieldForm(fields, "/register/", "form_register", "statusIconOverlay", "/register/");    
+       
+       
+   });
+   
+</script>
+<form method="post" role="form" id="form_register">
+   {% csrf_token %}
+   <div class="form-group row">
+      <div class="col-md-12">
+         <label for="id_username">Enter a username:</label>
+         <div class="input-group">
+            <span class="input-group-addon"><i class="fas fa-user fa-sm fa-fw"></i></span>
+            {{ form_signup.username }}
+            <script type="text/javascript">
+               $('#id_username').addClass("form-control");
+               $('#id_username').attr("placeholder", "Enter a username");
+            </script>
+         </div>
+      </div>
+   </div>
+   <div class="alert alert-danger" role="alert" id="username_msg"></div>
+   <div class="form-group row">
+      <div class="col-md-12">
+         <label for="id_password1">Enter a password:</label>
+         <div class="input-group">
+            <span class="input-group-addon"><i class="fas fa-lock fa-sm fa-fw"></i></span>
+            {{ form_signup.password1 }}
+            <script type="text/javascript">
+               $('#id_password1').addClass("form-control");
+               $('#id_password1').attr("placeholder", "Enter a password");
+            </script>               
+         </div>
+      </div>
+   </div>
+   <div class="alert alert-danger" role="alert" id="password1_msg"></div>
+   <div class="form-group row">
+      <div class="col-md-12">
+         <label for="id_password2">Confirm your password:</label>
+         <div class="input-group">
+            <span class="input-group-addon"><i class="fas fa-lock fa-sm fa-fw"></i></span>
+            {{ form_signup.password2 }}
+            <script type="text/javascript">
+               $('#id_password2').addClass("form-control");
+               $('#id_password2').attr("placeholder", "Confirm your password");
+            </script>               
+         </div>
+      </div>
+   </div>
+   <div class="alert alert-danger" role="alert" id="password2_msg"></div>
+</form>
+<center>
+<span id="statusIconOverlay"><i  class="fas fa-spinner fa-pulse fa-lg fa-fw" style="position: relative; vertical-align: middle; top: 10px;"></i></span>
+<center>
+<script type="text/javascript">
+   $('#statusIconOverlay').hide();
+</script>
