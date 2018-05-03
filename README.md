@@ -7,7 +7,7 @@ Make sure also that the Python version currently used is >= 3.0 as it is the Pyt
 To launch the application, you should type in the following command (from directory `pipeline-tester`):\
 `python atop/manage.py runserver`
 ## Testing
-To test this web application, you may do it by typing (from directory `pipeline-tester`):\
+To test this Web application, you may do it by typing (from directory `pipeline-tester`):\
 `python atop/manage.py test atop`
 
 (NOTE: you may need administrative rights to perform the testing correctly)
