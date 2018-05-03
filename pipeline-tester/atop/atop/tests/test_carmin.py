@@ -113,6 +113,9 @@ class CarminTestCase(LiveServerTestCase):
         assert len(descriptors) == 3
         assert len(descriptors.filter(Q(execution_status=EXECUTION_STATUS_UNCHECKED) & Q(error_message=""))) == 3
         assert True == self.md5_compare(descriptors, [tools.VALID_SUCC_DESC_A_MD5, tools.VALID_SUCC_DESC_B_MD5, tools.VALID_SUCC_DESC_C_MD5])
+        assert tools.valid_succ_desc_A_details.compare(tools.extract(descriptors, tools.VALID_SUCC_DESC_A_MD5)) == True
+        assert tools.valid_succ_desc_B_details.compare(tools.extract(descriptors, tools.VALID_SUCC_DESC_B_MD5)) == True
+        assert tools.valid_succ_desc_C_details.compare(tools.extract(descriptors, tools.VALID_SUCC_DESC_C_MD5)) == True
 
 
         self.request_carmin(self.APIKEYS[0])
@@ -129,6 +132,10 @@ class CarminTestCase(LiveServerTestCase):
                                                        tools.INVALID_DESC_A_MD5,
                                                        tools.INVALID_DESC_B_MD5, 
                                                        tools.INVALID_DESC_C_MD5,])
+        assert tools.valid_succ_desc_A_details.compare(tools.extract(descriptors, tools.VALID_SUCC_DESC_A_MD5)) == True
+        assert tools.valid_succ_desc_B_details.compare(tools.extract(descriptors, tools.VALID_SUCC_DESC_B_MD5)) == True
+        assert tools.valid_succ_desc_C_details.compare(tools.extract(descriptors, tools.VALID_SUCC_DESC_C_MD5)) == True
+
 
 
 
@@ -140,6 +147,10 @@ class CarminTestCase(LiveServerTestCase):
         assert len(descriptors.filter(Q(execution_status=EXECUTION_STATUS_ERROR) & ~Q(error_message=""))) == 3
         assert len(descriptors.filter(Q(execution_status=EXECUTION_STATUS_UNCHECKED) & Q(error_message=""))) == 1
         assert True == self.md5_compare(descriptors, [tools.INVALID_DESC_A_MD5, tools.INVALID_DESC_B_MD5, tools.INVALID_DESC_C_MD5, tools.VALID_SUCC_DESC_D_MD5])
+        assert tools.valid_succ_desc_D_details.compare(tools.extract(descriptors, tools.VALID_SUCC_DESC_D_MD5)) == True
+
+
+
 
         self.request_carmin(self.APIKEYS[0])
         carmin = self.get_carmin_platform()
@@ -148,6 +159,7 @@ class CarminTestCase(LiveServerTestCase):
         assert len(descriptors.filter(Q(execution_status=EXECUTION_STATUS_ERROR) & ~Q(error_message=""))) == 1
         assert len(descriptors.filter(Q(execution_status=EXECUTION_STATUS_UNCHECKED) & Q(error_message=""))) == 1
         assert True == self.md5_compare(descriptors, [tools.INVALID_DESC_B_MD5, tools.VALID_SUCC_DESC_D_MD5])
+        assert tools.valid_succ_desc_D_details.compare(tools.extract(descriptors, tools.VALID_SUCC_DESC_D_MD5)) == True
 
 
     # [state 1] Valid CARMIN platform with 3 valid descriptors
@@ -171,6 +183,9 @@ class CarminTestCase(LiveServerTestCase):
         # We must have populated the db with 3 valid descriptor entries
         assert len(descriptors) == 3
         assert len(descriptors.filter(Q(execution_status=EXECUTION_STATUS_UNCHECKED) & Q(error_message=""))) == 3
+        assert tools.valid_succ_desc_A_details.compare(tools.extract(descriptors, tools.VALID_SUCC_DESC_A_MD5)) == True
+        assert tools.valid_succ_desc_B_details.compare(tools.extract(descriptors, tools.VALID_SUCC_DESC_B_MD5)) == True
+        assert tools.valid_succ_desc_C_details.compare(tools.extract(descriptors, tools.VALID_SUCC_DESC_C_MD5)) == True
 
         self.request_carmin(self.APIKEYS[0])
         carmin = self.get_carmin_platform()
@@ -202,7 +217,7 @@ class CarminTestCase(LiveServerTestCase):
         # We should have one descriptor now
         assert len(descriptors) == 1
         assert len(descriptors.filter(Q(execution_status=EXECUTION_STATUS_UNCHECKED) & Q(error_message=""))) == 1
-
+        assert tools.valid_succ_desc_A_details.compare(tools.extract(descriptors, tools.VALID_SUCC_DESC_A_MD5)) == True
 
 
     # [state 1] Valid CARMIN paltform with 2 valid descriptors and 1 invalid descriptor
@@ -279,4 +294,3 @@ class CarminTestCase(LiveServerTestCase):
         assert len(descriptors) == 3
         assert len(descriptors.filter(Q(execution_status=EXECUTION_STATUS_UNCHECKED) & Q(error_message=""))) == 2
         assert len(descriptors.filter(Q(execution_status=EXECUTION_STATUS_ERROR) & ~Q(error_message=""))) == 1
-
