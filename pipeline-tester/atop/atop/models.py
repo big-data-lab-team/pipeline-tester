@@ -2,7 +2,7 @@
 from django.db import models
 from django.contrib.auth.models import User
 from atop.settings import TESTING
-
+import os
 
 
 def user_directory_path(instance, filename):
@@ -18,6 +18,7 @@ class CarminPlatform(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     is_public = models.BooleanField(default=False, verbose_name="exposure")
     name = models.CharField(max_length=100)
+    error_message = models.TextField(default="")
 
 EXECUTION_STATUS_UNCHECKED = 0
 EXECUTION_STATUS_SUCCESS = 1
@@ -42,6 +43,14 @@ class Descriptor(models.Model):
     md5 = models.CharField(max_length=16)
     
     carmin_platform = models.ForeignKey(CarminPlatform, on_delete=models.CASCADE, null=True)
+
+    def delete(self,*args,**kwargs):
+        if os.path.isfile(self.data_file.path):
+            os.remove(self.data_file.path)
+
+        super(Descriptor, self).delete(*args,**kwargs)
+
+
 
 TEST_STATUS_UNCHECKED = 0
 TEST_STATUS_SUCCESS = 1
