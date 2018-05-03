@@ -53,16 +53,19 @@ class HTTPGetter:
                 req.add_header(key, request_headers[key])
             self.data = urlopen(req).read()
         except HTTPError as e:
-            self.error = "[" + str(e.code) + "] " + e.reason
+            self.error = "[" + str(e.code) + "] " + str(e.reason)
             self.erroneous = True
         except URLError as e:
-            self.error = "URL error (" + e.reason + ")"
+            self.error = "URL error (" + str(e.reason) + ")"
             self.erroneous = True
         except ContentTooShortError:
             self.error = "Content too short"
             self.erroneous = True
         except ValueError:
             self.error = "Invalid URL"
+            self.erroneous = True
+        except Exception as e:
+            self.error = str(e)
             self.erroneous = True
 
     def is_erroneous(self):
@@ -72,4 +75,5 @@ class HTTPGetter:
         return self.error
 
     def get_data(self):
+        #print("data: " + str(self.data))
         return self.data
