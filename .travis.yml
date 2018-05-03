@@ -18,7 +18,7 @@ before_install:
 - cd ${TRAVIS_BUILD_DIR}
 
 install:
-- pip install pipeline-tester
+- python ./pipeline-tester/setup.py install
 
 script:
 - cd pipeline-tester/atop
