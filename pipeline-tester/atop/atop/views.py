@@ -5,31 +5,19 @@ from django.contrib.auth import authenticate, logout
 from django.contrib.auth import login as auth_login
 from django.shortcuts import render, redirect
 from django_tables2 import RequestConfig
-from .models import Descriptor, EXECUTION_STATUS_UNCHECKED, EXECUTION_STATUS_ERROR, EXECUTION_STATUS_FAILURE, EXECUTION_STATUS_SUCCESS, DescriptorTest, DescriptorTestAssertion
-from .tables import DescriptorTable, DescriptorTestTable
-from .forms import AddDescriptorForm
+from atop.models import Descriptor, CarminPlatform, EXECUTION_STATUS_UNCHECKED, DescriptorTest, DescriptorTestAssertion
+from atop.tables import DescriptorTable, DescriptorTestTable
+from atop.forms import AddDescriptorForm
 from django.http import HttpResponseRedirect, JsonResponse, HttpResponse, HttpResponseBadRequest
-from .models import ASSERTION_EXITCODE, ASSERTION_OUTPUT_FILE_EXISTS, ASSERTION_OUTPUT_FILE_MATCHES_MD5
-from .models import TEST_STATUS_UNCHECKED, TEST_STATUS_SUCCESS, TEST_STATUS_FAILURE
+from atop.models import ASSERTION_EXITCODE, ASSERTION_OUTPUT_FILE_EXISTS, ASSERTION_OUTPUT_FILE_MATCHES_MD5
 from django.db.models import Q
-
-import tempfile
-#from boutiques.localExec import LocalExecutor
-#import boutiques as bosh
-import sys
-import json
-
-from io import StringIO
-import hashlib
 
 
 from atop.carmin import CarminPlatformCandidate
 from atop.descriptor import DescriptorDataCandidate, DescriptorDataCandidateURLContainer, DescriptorDataCandidateLocalFileContainer, DescriptorDataCandidateLocalRawContainer, DescriptorEntry
 from atop.wsgi import run_queue
 
-from django.shortcuts import redirect
-
-    
+import json
 
     
 def validate_register(request):
@@ -62,8 +50,10 @@ def get_context_home(request):
         #print("user is authed")
         user_id = User.objects.get(pk=request.user.id)
         descs = Descriptor.objects.filter(Q(user_id=user_id) | Q(is_public=True)).all()
+        db_carminpfs = CarminPlatform.objects.filter(user=user).all()
     else:
         descs = Descriptor.objects.filter(is_public=True).all()
+        db_carminpfs = None
 
     desc_table = DescriptorTable(descs)
     RequestConfig(request).configure(desc_table)
@@ -82,7 +72,7 @@ def get_context_home(request):
     form_signup = UserCreationForm()
     form_login = AuthenticationForm(auto_id='id_login_%s')
     
-    context = {'table': desc_table, 'test_tables': test_tables, 'form': form, 'form_signup': form_signup, 'form_login': form_login}
+    context = {'table': desc_table, 'test_tables': test_tables, 'form': form, 'form_signup': form_signup, 'form_login': form_login, 'carmin_servers': db_carminpfs}
     return context
    
    
@@ -146,9 +136,11 @@ def register(request):
     # A GET to the url this function is bound to, is used by javscript to indicate the successfull of the registration
     # This is done so as to have control in the back-end over the redirection after this sucessfull registration.
     elif (request.method == "GET"):
-        return home_redirect(request)
+        return redirect("/")
     
-    return HttpResponseBadRequest()
+    messages.add_message(request, messages.INFO, 'Could not register: malformed request')
+    return redirect("/")
+
     
     
     
@@ -177,44 +169,109 @@ def login(request):
     
     # We redirect for the same reason we redirect in the registration process.
     elif (request.method == "GET"):
-        return home_redirect(request)
+        return redirect("/")
     
-    return HttpResponseBadRequest()
+    messages.add_message(request, messages.INFO, 'Could not login: malformed request')
+    return redirect("/")
+
             
-    
+DELETE_TYPE_DESCRIPTOR = 0
+DELETE_TYPE_CARMIN_PLATFORM = 1
+from django.contrib import messages
 def delete(request):
-    
+
     if request.method == "GET":
-        delete_id = data=request.GET.get("id")
-        if (not delete_id):
-            return HttpResponseBadRequest()
+
+        raw_delete_id = request.GET.get("id")
+        if (not raw_delete_id):
+            messages.add_message(request, messages.INFO, 'Cannot delete: id not specified')
+            return redirect("/")
+
+        
+        raw_delete_type = request.GET.get("type")
+        if (not raw_delete_type):
+            messages.add_message(request, messages.INFO, 'Cannot delete: type not specified')
+            return redirect("/")            
+
+        try:
+            delete_id = int(raw_delete_id)
+        except:
+            messages.add_message(request, messages.INFO, 'Cannot delete: expected integer as id')
+            return redirect("/")
+
+        try:
+            delete_type = int(raw_delete_type)
+        except:
+            messages.add_message(request, messages.INFO, 'Cannot delete: expected integer as type')
+            return redirect("/")
+            
 
         # See if the user has the clearence to perform this action
         user = request.user
         if (not user.is_authenticated):
             # Whoever requested this deletion is not even logged in.
-            return home_redirect(request, "Could not delete descriptor: user must be logged in to perform this operation")
+            #return home_redirect(request, "Could not delete object: user must be logged in to perform this operation")
+            messages.add_message(request, messages.INFO, 'Could not delete object: user must be logged in to perform this operation')
+            return redirect("/")
         
         user_id = User.objects.get(pk=request.user.id)
-        descriptor = Descriptor.objects.filter(id=delete_id).all()[0]
-        if (not descriptor):
-            # Descriptor could not be found.
-            return home_redirect(request, "Could not delete descriptor: descriptor not found")
+        if (delete_type == DELETE_TYPE_DESCRIPTOR):
 
-        if (not descriptor.user_id == user_id):
-            # User is not the owner of this descriptor
-            return home_redirect(request, "Could not delete descriptor: user does not own descriptor")
+
+            descriptor_queryset = Descriptor.objects.filter(id=delete_id)
+            if (len(descriptor_queryset) == 0):
+                # Descriptor could not be found.
+                messages.add_message(request, messages.INFO, 'Could not delete descriptor: descriptor not found')
+                return redirect("/")
+
+            db_desc = descriptor_queryset.all()[0]
+
+            if (not db_desc.user_id == user_id):
+                # User is not the owner of this descriptor
+                #return home_redirect(request, "Could not delete descriptor: user does not own descriptor")
+                messages.add_message(request, messages.INFO, 'Could not delete descriptor: user does not own descriptor')
+                return redirect("/")
+    
+            db_desc.delete()
             
-        descriptor.delete()
+            return redirect("/")
+
+        if (delete_type == DELETE_TYPE_CARMIN_PLATFORM):
+            
+            carmin_queryset = CarminPlatform.objects.filter(id=delete_id)
+            if (len(carmin_queryset) == 0):
+                # Carmin platform could not be found.
+                messages.add_message(request, messages.INFO, 'Could not delete carmin platform: carmin platform not found')
+                return redirect("/")
+
+            db_car = carmin_queryset.all()[0]
+
+            if (not db_car.user == user_id):
+                # User is not the owner of this carmin platform entry
+                messages.add_message(request, messages.INFO, 'Could not delete carmin platform: user does not own carmin platform entry')
+                return redirect("/")
+            
+            carmin = CarminEntry(db_car)
+            carmin.delete()
+
+            return redirect("/")
         
-        return home_redirect(request)
-        
+        messages.add_message(request, messages.INFO, 'Cannot delete: uknown object type')
+        return redirect("/")
+
     else:
-        return HttpResponseBadRequest()
+        messages.add_message(request, messages.INFO, 'Cannot delete: malformed request')
+        return redirect("/")
 
  
 
 def validate(request):
+
+    user = request.user
+    if (not user.is_authenticated):
+        # Whoever requested this deletion is not even logged in.
+        return HttpResponseBadRequest()
+
 
     if (request.method != "POST") and (request.method != "GET"):
         return HttpResponseBadRequest()    
@@ -283,11 +340,17 @@ def home(request):
 
     elif request.method == "POST":
 
+        user = request.user
+        if (not user.is_authenticated):
+            messages.add_message(request, messages.INFO, 'Could not add descriptor/platform: user not logged in')
+            return redirect("/")
+
         form = AddDescriptorForm(request.POST, request.FILES)
 
         # Perform validation on the form data
         if (not form.is_valid()):
-            return render(request, '/')
+            messages.add_message(request, messages.INFO, 'Could not add descriptor/platform: invalid form')
+            return redirect("/")
 
 	    # Perform a validation on the data
         type = int(form.cleaned_data["data_selector"])
@@ -300,10 +363,13 @@ def home(request):
             
             url = form.cleaned_data["data_carmin_platform_url"]
             apikey = form.cleaned_data["data_carmin_platform_apikey"]
-            
-            data = CarminPlatformCandidate(url, apikey, user=user_id)
+            is_public = form.cleaned_data["is_public"]            
+
+            data = CarminPlatformCandidate(url, apikey, user=user_id, is_public=is_public)
             if (data.submit() == False):
-                return HttpResponseRedirect(request, '/')
+                messages.add_message(request, messages.INFO, 'Could not add descriptor/platform: ' + str(data.get_message()))
+                return redirect("/")
+
 
                           
             
@@ -314,7 +380,9 @@ def home(request):
             is_public = form.cleaned_data["is_public"]
             data = DescriptorDataCandidate(DescriptorDataCandidateLocalFileContainer(file), is_public=is_public, user=user_id)
             if (data.validate() == False):
-                return render(request, '/')
+                messages.add_message(request, messages.INFO, 'Could not add descriptor/platform: ' + str(data.get_message()))
+                return redirect("/")
+
             data.submit()
                      
         if type == DATA_SELECTOR_URL:
@@ -324,7 +392,9 @@ def home(request):
             automatic_updating = form.cleaned_data["automatic_updating"]
             data = DescriptorDataCandidate(DescriptorDataCandidateURLContainer(url), is_public=is_public, automatic_updating=automatic_updating, user=user_id)
             if (data.validate() == False):
-                return render(request, '/')
+                messages.add_message(request, messages.INFO, 'Could not add descriptor/platform: ' + str(data.get_message()))
+                return redirect("/")
+
             data.submit()
 
         #print(form.errors)
@@ -335,18 +405,25 @@ def home(request):
     
 def run_tests(request):
 
-    user = User.objects.get(pk=request.user.id)
+    user = request.user
+    if (not user.is_authenticated):
+        messages.add_message(request, messages.INFO, 'Could not add to run queue: user not logged in')
+        return redirect("/")
 
-    run_queue.add(user)
+    valid, error_message = run_queue.add(user)
 
-    return redirect(request.META['HTTP_REFERER'])
+    if (not valid):
+        messages.add_message(request, messages.INFO, 'Could not add to run queue: ' + error_message)
+        return redirect("/")
+    else:
+        return redirect("/")
 
 
 
 def log_out(request):
 
     logout(request)
-    return redirect(request.META['HTTP_REFERER'])
+    return redirect("/")
     
 
 def get_assertion_typestring(type):
