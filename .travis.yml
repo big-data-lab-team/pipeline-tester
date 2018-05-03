@@ -1,0 +1,25 @@
+dist: trusty
+sudo: required
+language: python
+
+services:
+- docker
+
+python:
+- 3.4
+- 3.5
+- 3.5-dev
+- 3.6
+- 3.6-dev
+- 3.7-dev
+- nightly
+
+before_install:
+- cd ${TRAVIS_BUILD_DIR}
+
+install:
+- pip install pipeline-tester
+
+script:
+- cd pipeline-tester/atop
+- python manage.py test atop

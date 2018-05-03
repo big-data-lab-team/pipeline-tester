@@ -1,7 +1,7 @@
 # AToP (Automated Testing of Pipelines)
 ## Installation
-To install the required packages of AToP, you may do it so by typing:\
-`python setup.py install` within this directory.\
+To install the required packages of AToP, simply type:\
+`pip install pipeline-tester` from the base directory\
 Make sure also that the Python version currently used is >= 3.0 as it is the Python version used for this project.
 ## Lauching
 To launch the application, you should type in the following command (from this directory):\
