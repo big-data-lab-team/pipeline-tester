@@ -127,6 +127,9 @@ class DbDescriptorComparator:
         
         db_tests = db.DescriptorTest.objects.filter(descriptor=db_desc.id)
 
+        if (self.tests == {} and len(db_tests) == 0):
+            return True
+
         if (len(db_tests) != len(self.tests)):
             return False
             
@@ -158,6 +161,13 @@ valid_succ_desc_C_details.create_test("test3", "exampleTool1.py -c ./config.txt 
 valid_succ_desc_C_details.add_assertion("test3", DbDescriptorTestAssertionComparator(db.ASSERTION_OUTPUT_FILE_EXISTS, "log-4.txt"))
 valid_succ_desc_C_details.add_assertion("test3", DbDescriptorTestAssertionComparator(db.ASSERTION_OUTPUT_FILE_EXISTS, "./config.txt"))
 
+
+# Descriptors A,B,C and D all have the same test specifications
+valid_succ_desc_A_details = valid_succ_desc_C_details
+valid_succ_desc_B_details = valid_succ_desc_C_details
+valid_succ_desc_D_details = valid_succ_desc_C_details
+
+
 valid_unsucc_desc_A_details = DbDescriptorComparator()
 valid_unsucc_desc_A_details.create_test("test1", "exampleTool1.py -c ./config.txt -i foo bar    -e val1  ./setup.py -l 1 2 3  &>  log-4.txt\n")
 valid_unsucc_desc_A_details.add_assertion("test1", DbDescriptorTestAssertionComparator(db.ASSERTION_EXITCODE, "0"))
@@ -172,6 +182,12 @@ valid_unsucc_desc_C_details.create_test("test1", "exampleTool1.py -c ./config.tx
 valid_unsucc_desc_C_details.add_assertion("test1", DbDescriptorTestAssertionComparator(db.ASSERTION_OUTPUT_FILE_EXISTS, "output/*_exampleOutputTag.resultType"))
 
 
+empty_details = DbDescriptorComparator()
+
+
+
+
+
 
 def md5_compare(query_set, expected_md5_list):
     target_md5_list = []
@@ -181,6 +197,13 @@ def md5_compare(query_set, expected_md5_list):
         if (not (expected_md5 in target_md5_list)):
             return False
     return True
+
+def extract(query_set, expected_md5):
+    for descriptor in query_set.all():
+        if (descriptor.md5 == expected_md5):
+            return descriptor
+    return None
+
 
 def check_status(descriptor_md5, expected_status):
     desc = db.Descriptor.objects.filter(md5=descriptor_md5).all()[0]
