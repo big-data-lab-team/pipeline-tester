@@ -52,7 +52,6 @@ class DescriptorDataCandidateURLContainer(DescriptorDataCandidateContainer):
         return self.error
 
     def get_data(self):
-        #print("data: " + str(self.data))
         return self.data
     
 class DescriptorDataCandidateLocalFileContainer(DescriptorDataCandidateContainer):
@@ -162,7 +161,9 @@ class DescriptorDataCandidate:
         # Validation
         try:
             bosh.validate(file.name)
+            self.validated = True
         except Exception as exc:
+            self.validated = False
             file.close()
             if (not allow_invalid):
             # An invalid descriptor is allowed on submission only if the 'allow_invalid' argument is set
@@ -194,8 +195,17 @@ class DescriptorDataCandidate:
     def get(self):
         return self.container.get_data()
         
-        
+    def get_name(self):
+        desc_JSON = json.loads(self.container.get_data())
+        return desc_JSON["name"]
+
+    def get_version(self):
+        desc_JSON = json.loads(self.container.get_data())
+        return desc_JSON["tool-version"]        
+
     def get_MD5(self):
+        if (self.container.is_medium_erroneous()):
+            return "0"
         return calculate_MD5(self.container.get_data())
         
     def get_message(self):
@@ -223,101 +233,164 @@ class DescriptorEntry:
             self.has_carmin_platform = True
         else:
             self.has_carmin_platform = False
-    
+
 
     def update(self, scheduled=False, force_static_validation=False):
-    
+        
+        if (self.db_desc.error_message != ""):
+            erroneous_db = True
+        else:
+            erroneous_db = False
+
+        self.db_desc.last_updated = datetime.date.today()
+
         # Reset any possible error messages
         self.db_desc.error_message = ""
-        
-        # Validate the data
 
-        if (self.medium_type == DATA_SELECTOR_URL and self.db_desc.automatic_updating == True):
-            # We have to validate URL based descriptors regardless of changes in the the descriptor data.
-            # This is because some of the descriptor's properties might have been changed due to URL errors.
-
-            container_url = DescriptorDataCandidateURLContainer(self.db_desc.data_url)
-            if (container_url.is_medium_erroneous()):
-                
-                # Impossible to communicate properly with the server.
-                # In this case we set an error message.
-                # We however keep the information about the data that was previously successfully fetched from the server.
-                self.db_desc.execution_status = EXECUTION_STATUS_ERROR
-                self.db_desc.error_message = container_url.get_error()
-                self.db_desc.save()
-
-                return False
-            else:
-                data = DescriptorDataCandidate(container_url)
-                md5 = data.get_MD5()
+        if (self.medium_type == DATA_SELECTOR_URL):
             
+            if (self.db_desc.automatic_updating == True):
+                container_url = DescriptorDataCandidateURLContainer(self.db_desc.data_url)
+                if (container_url.is_medium_erroneous()):
+                    # Erroneous URL
+                    self.db_desc.execution_status = EXECUTION_STATUS_ERROR
+                    self.db_desc.error_message = container_url.get_error()
+                    self.db_desc.save()
+                    # Tests should be deleted ?
+                    return False    
+                else:
+                    # We were able to successfully fetch the data from the URL.
+                    data = DescriptorDataCandidate(container_url)
+                    md5 = data.get_MD5()
+                    if (md5 != self.db_desc.md5 or erroneous_db):
 
-        elif (self.medium_type == DATA_SELECTOR_FILE and force_static_validation == True):
+                        data.validate()
+                        if (not data.is_valid()):
+                            # Erroneous data
+                            # Set the error
+                            self.db_desc.execution_status = EXECUTION_STATUS_ERROR
+                            self.db_desc.error_message = data.get_message()
+                            
+                            # Update tool properties.
+                            self.db_desc.tool_name = ""
+                            self.db_desc.version = ""
+                            self.db_desc.md5 = md5
 
-            # A descriptor fetched from a CARMIN servers registers its data through a file.
-            # As the descriptor may be subjected by errors from the CARMIN server that erase previously set execution status and error messages,
-            # it is necessary to validate the descriptor another time to restore the possible properties that were set when the CARMIN server was functional.
-            content = self.db_desc.data_file.read()
-            self.db_desc.data_file.seek(0)
-            data = DescriptorDataCandidate(DescriptorDataCandidateLocalRawContainer(content))
-            # The md5 remains the same as the data as not changed.
-            md5 = self.db_desc.md5
-        else:
-            # We are facing an entry registered through a simple file upload.
-            # No need to validate it, but as part of the update, we have to regenerate new test entries.
-            if (scheduled):
-                self.db_desc.execution_status = EXECUTION_STATUS_SCHEDULED
-                self.db_desc.save()
+                            # Remove test entries if any were there previously 
+                            self.delete_tests()
+                            self.db_desc.save()
+
+                            return False
+                        else:
+                            # URL data is valid, but with different data
+                            self.db_desc.md5 = md5
+
+                            self.delete_tests()
+                            self.generate_tests()
+
+                            self.db_desc.tool_name = data.get_name()
+                            self.db_desc.version = data.get_version()                            
+
+                            if (scheduled):
+                                self.db_desc.execution_status = EXECUTION_STATUS_SCHEDULED
+                            else:
+                                self.db_desc.execution_status = EXECUTION_STATUS_UNCHECKED
+
+                            self.db_desc.save()
+                            return True
+                    else:
+                        # The data has not changed, nor has an error happened during the last fetching
+                        # In this case, we have nothing to do but to reset the execution status of the tests
+                        if (scheduled):
+                            self.db_desc.execution_status = EXECUTION_STATUS_SCHEDULED
+                        else:
+                            self.db_desc.execution_status = EXECUTION_STATUS_UNCHECKED
+                        self.db_desc.save()
+                        self.reset_tests()                                  
+                        return True  
+
             else:
-                self.db_desc.execution_status = EXECUTION_STATUS_UNCHECKED               
+                # The descriptor is URL based but automatic updating was set to off
+                # This makes the descriptor just like a descriptor that was uploaded locally.
+                # This means that the descriptor data or error status will never change.
+                if (scheduled):
+                    self.db_desc.execution_status = EXECUTION_STATUS_SCHEDULED
+                else:
+                    self.db_desc.execution_status = EXECUTION_STATUS_UNCHECKED
+                self.db_desc.save()
+                self.reset_tests()
 
-            self.delete_tests()
-            self.generate_tests()
+                return True
 
-            return True
-
-        # Include the MD5
-        self.db_desc.md5 = md5
-
-        data.validate()
-        
-        if (not data.is_valid()):
-
-            # Set the error
-            self.db_desc.execution_status = EXECUTION_STATUS_ERROR
-            self.db_desc.error_message = data.get_message()
+        if (self.medium_type == DATA_SELECTOR_FILE):
             
-            # Remove the tool name if one was set.
-            self.db_desc.tool_name = ""
-            # Remove test entries if any were there previously 
-            self.delete_tests()
-            self.db_desc.save()
-
-            return False     
-
-        # Past this point, we know the descriptor is valid.
-        if (scheduled):
-            self.db_desc.execution_status = EXECUTION_STATUS_SCHEDULED
-        else:
-            self.db_desc.execution_status = EXECUTION_STATUS_UNCHECKED
-        self.db_desc.save()
-        self.delete_tests()
-        self.generate_tests()
-
-        # Addtionaly, when facing a URL based descriptor entry, we have to update its data file.
-        # This is a necessary step for the launching of tests as we will feed the file path of the descriptor to bosh test.
-        if (self.medium_type != DATA_SELECTOR_URL):
-            return True
-
-        # We only need to update the descriptor file if the fetched descriptor happens to be different.
-        # To establish this fact, we do a MD5 comparison.
-        if (md5 != self.db_desc.md5):
-
-            with open(self.db_desc.data_file.file.name, 'wb') as fhandle:
-                print(calculate_MD5(data.get()))
-                fhandle.write(data.get())
+            if (force_static_validation):
+                # If force_static_validation has been passed, that means that we are facing a descriptor that was acquired through a CARMIN platform.
                 
-        return True
+                # A descriptor fetched from a CARMIN servers registers its data through a file.
+                # As the descriptor may be subjected by errors from the CARMIN server that erase previously set execution status and error messages,
+                # it is necessary to validate the descriptor another time to restore the possible properties that were set when the CARMIN server was functional.
+                
+                if (erroneous_db and self.db_desc.tool_name != ""):
+                    
+                    # A CARMIN platform error was previously set.
+                    # We have to validate the data to know the previous original status of the descriptor           
+                    # We dont have to regenerate test entries.
+                    content = self.db_desc.data_file.read()
+                    self.db_desc.data_file.seek(0)
+                    data = DescriptorDataCandidate(DescriptorDataCandidateLocalRawContainer(content))
+                    data.validate()
+                    if (data.is_valid()):
+                        # The descriptor is fine.
+                        if (scheduled):
+                            self.db_desc.execution_status = EXECUTION_STATUS_SCHEDULED
+                        else:
+                            self.db_desc.execution_status = EXECUTION_STATUS_UNCHECKED
+                        self.db_desc.save()
+                        # Again, no need to regenerate test cases, they should already been there.
+                        # We only have to reset the tests.
+                        self.reset_tests()
+
+                        return True
+                elif (not erroneous_db):
+                    
+                    # Otherwise, lets just check if the descriptor is valid and set execution status to scheduled if scheduled is set.
+                    if (scheduled):
+                        self.db_desc.execution_status = EXECUTION_STATUS_SCHEDULED
+                    else:
+                        self.db_desc.execution_status = EXECUTION_STATUS_UNCHECKED
+                    self.db_desc.save()                    
+                    self.reset_tests()
+
+                    return True
+            else:
+                # This is a file that was uploaded through a file upload
+                # We do not have any actions to performs, other than cleaning up tests and setting the execution status.
+                if (scheduled):
+                    self.db_desc.execution_status = EXECUTION_STATUS_SCHEDULED
+                else:
+                    self.db_desc.execution_status = EXECUTION_STATUS_UNCHECKED
+                self.db_desc.save()                    
+                self.reset_tests()
+
+                return True
+                        
+                        
+                    
+    def reset_tests(self):
+        get_tests_query = DescriptorTest.objects.filter(descriptor=self.db_desc)
+        db_tests = get_tests_query.all()
+        
+        # We check if tests exist.
+        if (len(db_tests) == 0):
+            return        
+
+        # We iterate on each of those tests to reset their execution status.
+        for db_test in db_tests:        
+            db_test.execution_status = TEST_STATUS_UNCHECKED
+            db_test.save()
+
+
 
 
         
@@ -477,12 +550,9 @@ class DescriptorEntry:
         # Remove the tests before
         self.delete_tests()
         # Remove the entry itself
-        #print(self.db_desc.tool_name)
-
-        # Remove the file.
-        self.db_desc.data_file.delete()
-
         self.db_desc.delete()
+
+
     
     # TODO: Prevent the desc from being deleted.
     def test(self):
