@@ -2,7 +2,7 @@ from threading import Lock
 from queue import Queue
 
 from atop.models import CarminPlatform, Descriptor
-from atop.models import EXECUTION_STATUS_SCHEDULED
+from atop.models import EXECUTION_STATUS_SCHEDULED, EXECUTION_STATUS_RUNNING
 
 from django.db.models import Q
 
@@ -22,13 +22,15 @@ class RunQueue:
 
         self.serving_lock.acquire(True)       
 
-        # First: check if the user can add descriptors / carmin platforms to the RunQueue.
         allowed, message = self.is_allowed(user)
         if (not allowed):
+            self.serving_lock.release()
             return (False, message)
         
-        # Then:
-        self.prepare(user)
+        descriptor_count = self.prepare(user)
+        if (descriptor_count < 1):
+            self.serving_lock.release()
+            return (False, "User has no descriptor to run")        
 
         self.serving_lock.release()        
 
@@ -45,9 +47,11 @@ class RunQueue:
         return (True, None)
 
     def is_allowed(self, user):
-        
-        if (user in self.queue.queue):
-            return (False, "User's descriptors update already scheduled/in progress")       
+
+        running_descs = Descriptor.objects.filter(Q(user_id=user) & (Q(execution_status=EXECUTION_STATUS_SCHEDULED) | Q(execution_status=EXECUTION_STATUS_RUNNING))).all()
+        if (len(running_descs) != 0):
+            return (False, "User's descriptors update already scheduled/in progress")
+
         return (True, None)
        
    
@@ -74,13 +78,16 @@ class RunQueue:
                 desc.update(scheduled=True)
 
         # Get local descriptors
-        get_regular_descriptors = Descriptor.objects.filter(Q(automatic_updating=False) & Q(carmin_platform=None))
+        get_regular_descriptors = Descriptor.objects.filter(Q(automatic_updating=False) & Q(carmin_platform=None) & Q(user_id=user))
         regular_descriptors = get_regular_descriptors.all()
 
         if (regular_descriptors):
             for db_desc in regular_descriptors:
                 desc = desc_utils.DescriptorEntry(db_desc)
                 desc.update(scheduled=True)
+
+        all_desc = Descriptor.objects.filter(Q(user_id=user) & Q(execution_status=EXECUTION_STATUS_SCHEDULED))
+        return len(all_desc)       
 
 
     def run_loop(self):
@@ -101,11 +108,9 @@ class RunQueue:
             # In addition to that we also exclude descriptors that have been marked as erroneous during the preparation part.
             get_descriptors = Descriptor.objects.filter(Q(user_id=user) & Q(execution_status=EXECUTION_STATUS_SCHEDULED))
             db_descs = get_descriptors.all()
-            #for db_desc in db_descs:
-            #   print("n:" + db_desc.tool_name)
             
             for db_desc in db_descs:
                 desc = desc_utils.DescriptorEntry(db_desc)
-                desc.test()        
+                desc.test()
                     
                 
