@@ -29,7 +29,7 @@ class URLBasedDescriptorTestCase(LiveServerTestCase):
     # [state 4] Same descriptor on same URL
     def test_descriptor_data_change(self):
         urldesc_server_obj.add_state("url1", State(State.SERVER_STATUS_VALID, tools.VALID_SUCC_DESC_A))
-        urldesc_server_obj.add_state("url1", State(State.SERVER_STATUS_VALID, tools.VALID_SUCC_DESC_B))
+        urldesc_server_obj.add_state("url1", State(State.SERVER_STATUS_VALID, tools.VALID_UNSUCC_DESC_B))
         urldesc_server_obj.add_state("url1", State(State.SERVER_STATUS_VALID, tools.VALID_SUCC_DESC_B))
 
         updater = tools.URLBasedDescriptorUpdater(self.server_url_1, self.dummy_user)
@@ -39,19 +39,21 @@ class URLBasedDescriptorTestCase(LiveServerTestCase):
         assert len(descriptors) == 1
         assert len(descriptors.filter(Q(execution_status=EXECUTION_STATUS_UNCHECKED) & Q(error_message=""))) == 1
         assert tools.md5_compare(Descriptor.objects, [tools.VALID_SUCC_DESC_A_MD5]) == True
+        assert tools.valid_succ_desc_A_details.compare(tools.extract(descriptors, tools.VALID_SUCC_DESC_A_MD5)) == True
 
+        updater.update()
+        descriptors = Descriptor.objects.all()
+        assert len(descriptors) == 1
+        assert len(descriptors.filter(Q(execution_status=EXECUTION_STATUS_UNCHECKED) & Q(error_message=""))) == 1
+        assert tools.md5_compare(Descriptor.objects, [tools.VALID_UNSUCC_DESC_B_MD5]) == True
+        assert tools.valid_unsucc_desc_B_details.compare(tools.extract(descriptors, tools.VALID_UNSUCC_DESC_B_MD5)) == True
 
         updater.update()
         descriptors = Descriptor.objects.all()
         assert len(descriptors) == 1
         assert len(descriptors.filter(Q(execution_status=EXECUTION_STATUS_UNCHECKED) & Q(error_message=""))) == 1
         assert tools.md5_compare(Descriptor.objects, [tools.VALID_SUCC_DESC_B_MD5]) == True
-
-        updater.update()
-        descriptors = Descriptor.objects.all()
-        assert len(descriptors) == 1
-        assert len(descriptors.filter(Q(execution_status=EXECUTION_STATUS_UNCHECKED) & Q(error_message=""))) == 1
-        assert tools.md5_compare(Descriptor.objects, [tools.VALID_SUCC_DESC_B_MD5]) == True
+        assert tools.valid_succ_desc_B_details.compare(tools.extract(descriptors, tools.VALID_SUCC_DESC_B_MD5)) == True
 
 
   
@@ -68,6 +70,7 @@ class URLBasedDescriptorTestCase(LiveServerTestCase):
         assert len(descriptors) == 1
         assert len(descriptors.filter(Q(execution_status=EXECUTION_STATUS_UNCHECKED) & Q(error_message=""))) == 1
         assert tools.md5_compare(Descriptor.objects, [tools.VALID_SUCC_DESC_A_MD5]) == True
+        assert tools.valid_succ_desc_A_details.compare(tools.extract(descriptors, tools.VALID_SUCC_DESC_A_MD5)) == True
 
 
         updater.update()
@@ -75,6 +78,7 @@ class URLBasedDescriptorTestCase(LiveServerTestCase):
         assert len(descriptors) == 1
         assert len(descriptors.filter(Q(execution_status=EXECUTION_STATUS_UNCHECKED) & Q(error_message=""))) == 1
         assert tools.md5_compare(Descriptor.objects, [tools.VALID_SUCC_DESC_A_MD5]) == True
+        assert tools.valid_succ_desc_A_details.compare(tools.extract(descriptors, tools.VALID_SUCC_DESC_A_MD5)) == True
 
 
     # [state 1] Valid descriptor on URL
@@ -93,7 +97,7 @@ class URLBasedDescriptorTestCase(LiveServerTestCase):
         urldesc_server_obj.add_state("url1", State(State.SERVER_STATUS_VALID, tools.VALID_SUCC_DESC_A))
         urldesc_server_obj.add_state("url1", State(State.SERVER_STATUS_UNREACHABLE, None))
         urldesc_server_obj.add_state("url1", State(State.SERVER_STATUS_VALID, tools.INVALID_DESC_C))
-        urldesc_server_obj.add_state("url1", State(State.SERVER_STATUS_VALID, tools.VALID_SUCC_DESC_B))
+        urldesc_server_obj.add_state("url1", State(State.SERVER_STATUS_VALID, tools.VALID_UNSUCC_DESC_B))
 
         updater = tools.URLBasedDescriptorUpdater(self.server_url_1, self.dummy_user)     
        
@@ -103,6 +107,7 @@ class URLBasedDescriptorTestCase(LiveServerTestCase):
         assert len(descriptors) == 1
         assert len(descriptors.filter(Q(execution_status=EXECUTION_STATUS_UNCHECKED) & Q(error_message=""))) == 1
         assert tools.md5_compare(Descriptor.objects, [tools.VALID_SUCC_DESC_A_MD5]) == True
+        assert tools.valid_succ_desc_A_details.compare(tools.extract(descriptors, tools.VALID_SUCC_DESC_A_MD5)) == True
 
         # [state 2]
         updater.update()
@@ -110,6 +115,7 @@ class URLBasedDescriptorTestCase(LiveServerTestCase):
         assert len(descriptors) == 1
         assert len(descriptors.filter(Q(execution_status=EXECUTION_STATUS_ERROR) & ~Q(error_message=""))) == 1
         assert tools.md5_compare(Descriptor.objects, [tools.INVALID_DESC_A_MD5]) == True
+        assert tools.empty_details.compare(tools.extract(descriptors, tools.INVALID_DESC_A_MD5)) == True
 
         # [state 3]
         updater.update()
@@ -117,6 +123,7 @@ class URLBasedDescriptorTestCase(LiveServerTestCase):
         assert len(descriptors) == 1
         assert len(descriptors.filter(Q(execution_status=EXECUTION_STATUS_ERROR) & ~Q(error_message=""))) == 1
         assert tools.md5_compare(Descriptor.objects, [tools.INVALID_DESC_A_MD5]) == True
+        assert tools.empty_details.compare(tools.extract(descriptors, tools.INVALID_DESC_A_MD5)) == True
 
         # [state 4]
         updater.update()
@@ -124,6 +131,7 @@ class URLBasedDescriptorTestCase(LiveServerTestCase):
         assert len(descriptors) == 1
         assert len(descriptors.filter(Q(execution_status=EXECUTION_STATUS_ERROR) & ~Q(error_message=""))) == 1
         assert tools.md5_compare(Descriptor.objects, [tools.INVALID_DESC_B_MD5]) == True
+        assert tools.empty_details.compare(tools.extract(descriptors, tools.INVALID_DESC_B_MD5)) == True
 
         # [state 5]
         updater.update()
@@ -131,6 +139,7 @@ class URLBasedDescriptorTestCase(LiveServerTestCase):
         assert len(descriptors) == 1
         assert len(descriptors.filter(Q(execution_status=EXECUTION_STATUS_UNCHECKED) & Q(error_message=""))) == 1
         assert tools.md5_compare(Descriptor.objects, [tools.VALID_SUCC_DESC_A_MD5]) == True
+        assert tools.valid_succ_desc_A_details.compare(tools.extract(descriptors, tools.VALID_SUCC_DESC_A_MD5)) == True
 
         # [state 6] (As we are facing a server error, the MD5 should be equal to the MD5 of the last fetched descriptor)
         updater.update()
@@ -138,6 +147,7 @@ class URLBasedDescriptorTestCase(LiveServerTestCase):
         assert len(descriptors) == 1
         assert len(descriptors.filter(Q(execution_status=EXECUTION_STATUS_ERROR) & ~Q(error_message=""))) == 1
         assert tools.md5_compare(Descriptor.objects, [tools.VALID_SUCC_DESC_A_MD5]) == True
+        assert tools.valid_succ_desc_A_details.compare(tools.extract(descriptors, tools.VALID_SUCC_DESC_A_MD5)) == True
 
         # [state 7]
         updater.update()
@@ -145,13 +155,15 @@ class URLBasedDescriptorTestCase(LiveServerTestCase):
         assert len(descriptors) == 1
         assert len(descriptors.filter(Q(execution_status=EXECUTION_STATUS_ERROR) & ~Q(error_message=""))) == 1
         assert tools.md5_compare(Descriptor.objects, [tools.INVALID_DESC_C_MD5]) == True
+        assert tools.empty_details.compare(tools.extract(descriptors, tools.INVALID_DESC_C_MD5)) == True
 
         # [state 8]
         updater.update()
         descriptors = Descriptor.objects.all()
         assert len(descriptors) == 1
         assert len(descriptors.filter(Q(execution_status=EXECUTION_STATUS_UNCHECKED) & Q(error_message=""))) == 1
-        assert tools.md5_compare(Descriptor.objects, [tools.VALID_SUCC_DESC_B_MD5]) == True
+        assert tools.md5_compare(Descriptor.objects, [tools.VALID_UNSUCC_DESC_B_MD5]) == True
+        assert tools.valid_unsucc_desc_B_details.compare(tools.extract(descriptors, tools.VALID_UNSUCC_DESC_B_MD5)) == True
 
 
     #TODO: Do this in another test?
@@ -167,5 +179,4 @@ class URLBasedDescriptorTestCase(LiveServerTestCase):
         
         data_cand = desc_utils.DescriptorDataCandidate(desc_utils.DescriptorDataCandidateURLContainer(self.server_url_1), user=self.dummy_user)
         assert data_cand.validate() == False
-
 
