@@ -153,22 +153,25 @@ multiple_tests_comparator.add_assertion("test3", DbDescriptorTestAssertionCompar
 multiple_tests_comparator.add_assertion("test3", DbDescriptorTestAssertionComparator(db.ASSERTION_OUTPUT_FILE_EXISTS, "./config.txt"))
 
 
-valid_succ_desc_A_details = DbDescriptorComparator()
-valid_succ_desc_A_details.create_test
-
-valid_succ_desc_B_details = DbDescriptorComparator()
-
-
 valid_succ_desc_C_details = DbDescriptorComparator()
 valid_succ_desc_C_details.create_test("test3", "exampleTool1.py -c ./config.txt -i foo bar    -e val1  ./setup.py -l 1 2 3  &>  log-4.txt\n")
 valid_succ_desc_C_details.add_assertion("test3", DbDescriptorTestAssertionComparator(db.ASSERTION_OUTPUT_FILE_EXISTS, "log-4.txt"))
 valid_succ_desc_C_details.add_assertion("test3", DbDescriptorTestAssertionComparator(db.ASSERTION_OUTPUT_FILE_EXISTS, "./config.txt"))
 
+valid_unsucc_desc_A_details = DbDescriptorComparator()
+valid_unsucc_desc_A_details.create_test("test1", "exampleTool1.py -c ./config.txt -i foo bar    -e val1  ./setup.py -l 1 2 3  &>  log-4.txt\n")
+valid_unsucc_desc_A_details.add_assertion("test1", DbDescriptorTestAssertionComparator(db.ASSERTION_EXITCODE, "0"))
+valid_unsucc_desc_A_details.add_assertion("test1", DbDescriptorTestAssertionComparator(db.ASSERTION_OUTPUT_FILE_MATCHES_MD5, "log-4.txt", "WRONGMD5"))
+
+valid_unsucc_desc_B_details = DbDescriptorComparator()
+valid_unsucc_desc_B_details.create_test("test1", "exampleTool1.py -c ./config.txt -i foo bar    -e val1  ./setup.py -l 1 2 3  &>  log-4.txt\n")
+valid_unsucc_desc_B_details.add_assertion("test1", DbDescriptorTestAssertionComparator(db.ASSERTION_EXITCODE, "99"))
+
+valid_unsucc_desc_C_details = DbDescriptorComparator()
+valid_unsucc_desc_C_details.create_test("test1", "exampleTool1.py -c ./config.txt -i foo bar    -e val1  ./setup.py -l 1 2 3  &>  log-4.txt\n")
+valid_unsucc_desc_C_details.add_assertion("test1", DbDescriptorTestAssertionComparator(db.ASSERTION_OUTPUT_FILE_EXISTS, "output/*_exampleOutputTag.resultType"))
 
 
-example_db_entry = db.Descriptor.objects.all()
-tstatus = multiple_tests_comparator.compare(db.Descriptor.objects.filter(tool_name="Example Boutiques Tool").all()[0])
-tstatus = valid_succ_desc_A_details.compare(db.Descriptor.objects.filter(tool_name="Valid descriptor C").all()[0])
 
 def md5_compare(query_set, expected_md5_list):
     target_md5_list = []
@@ -180,7 +183,7 @@ def md5_compare(query_set, expected_md5_list):
     return True
 
 def check_status(descriptor_md5, expected_status):
-    desc = Descriptor.objects.filter(md5=descriptor_md5).all()[0]
+    desc = db.Descriptor.objects.filter(md5=descriptor_md5).all()[0]
     if (desc):
         if (desc.execution_status == expected_status):
             return True
@@ -208,3 +211,10 @@ def delete_user_testing_data():
     user_data_testing_path = BASE_DIR + "/user_data_testing/"
     if (os.path.exists(user_data_testing_path)):
         shutil.rmtree(user_data_testing_path)
+
+
+def file_exists(relative_path):
+    full_path = BASE_DIR + "/" + relative_path
+    if (os.path.exists(full_path)):
+        return True
+    return False
