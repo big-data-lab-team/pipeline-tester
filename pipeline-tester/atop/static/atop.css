@@ -1,0 +1,81 @@
+         .tabbable {
+         margin: 10px;
+         height: 300px;
+         overflow: hidden;
+         }
+         .nav-tabs {
+         margin: 0;
+         }
+         .tab-content {
+         //height: 100%; 
+         border-left: 1px solid #ccc ; 
+         border-right: 1px solid #ccc;
+         border-bottom: 1px solid #ccc;
+         }
+         .form-check-input {
+         margin-left: 0;
+         }
+         .top1 {
+         margin-top: 1.25rem;
+         margin-bottom: 1.25rem;
+         //margin-left: .25rem;
+         }
+         .code-span {
+         -ms-word-break: break-all;
+         word-break: break-all;
+         /* Non standard for webkit */
+         word-break: break-word;
+         -webkit-hyphens: auto;
+         -moz-hyphens: auto;
+         hyphens: auto;
+         display: inline-block;
+         color: white
+         }
+         .code-container {
+         width: 100%;
+         background-color: #20282c;
+         min-height:120px; 
+         padding: 5px;
+         }
+         code {
+         background-color: inherit;
+         display: inline-block;
+         }
+         pre {
+         white-space: pre-wrap;       /* css-3 */
+         white-space: -moz-pre-wrap;  /* Mozilla, since 1999 */
+         white-space: -pre-wrap;      /* Opera 4-6 */
+         white-space: -o-pre-wrap;    /* Opera 7 */
+         word-wrap: break-word;
+         }
+         .card-header {
+         padding: 4px;
+         }
+         .btn-outline {
+         background-color: transparent;
+         color: inherit;
+         transition: all .5s;
+         text-align: left;
+         }
+         .btn-primary.btn-outline {
+         color: #428bca;
+         }
+         .btn-success.btn-outline {
+         color: #5cb85c;
+         }
+         .btn-info.btn-outline {
+         color: #5bc0de;
+         }
+         .btn-warning.btn-outline {
+         color: #f0ad4e;
+         }
+         .btn-danger.btn-outline {
+         color: #d9534f;
+         }
+         .btn-primary.btn-outline:hover,
+         .btn-success.btn-outline:hover,
+         .btn-info.btn-outline:hover,
+         .btn-warning.btn-outline:hover,
+         .btn-danger.btn-outline:hover {
+         color: #fff;
+         }
