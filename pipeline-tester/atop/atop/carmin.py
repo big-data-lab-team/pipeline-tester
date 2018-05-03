@@ -10,7 +10,7 @@ import atop.descriptor as desc_utils
 
 class CarminPlatformCandidate:
     
-    def __init__(self, url, apikey, user=None):
+    def __init__(self, url, apikey, user=None, is_public=False):
         self.url = url
         self.apikey = apikey
         self.erroneous = False
@@ -20,6 +20,7 @@ class CarminPlatformCandidate:
         self.raw_descriptors = []
         self.descriptors = []
         self.user = user
+        self.is_public = False
 
         self.is_carmin_online = False
         self.descriptor_count = 0
@@ -31,13 +32,11 @@ class CarminPlatformCandidate:
         
 
     def _get_descriptors(self, executable_pipelines):
-        #print(executable_pipelines)
         raw_descriptors = []
         for pipeline_id in executable_pipelines:
             path = "pipelines/" + pipeline_id + "/boutiquesdescriptor"
             descriptor_url = self._urlize(self.url, path)
             getter = HTTPGetter(descriptor_url, self.carmin_headers)
-            #print(descriptor_url)
             if (not getter.is_erroneous()):
                 raw_data = getter.get_data()
                 if (raw_data):
@@ -50,7 +49,6 @@ class CarminPlatformCandidate:
         count = 0        
         for raw_descriptor in raw_descriptors:
             descriptor_file = create_temporary_file(raw_descriptor)
-            #print(json.dumps(JSON_descriptor))
             try:
                 bosh.validate(descriptor_file.name)
                 count += 1
@@ -79,12 +77,6 @@ class CarminPlatformCandidate:
 
 
     def validate(self):
-
-        # (1) lets see if we have a real         
-        # Err 1: Host reachable, but it is not a valid CARMIN platform ("/platform" does not return a JSON string)
-        # Err 2: Host appears to be a CARMIN server but '/pipelines' does not return anthing (Invalid API key ?)"
-        # Err 3: Host does not have any pipeline the user may execute'
-        # Err 4: Host has executable pipeline(s) listed, but no descriptor(s) were found associated with them.
         
         is_carmin_error = lambda JSON_data: True if (isinstance(JSON_data, dict) and JSON_data.get('code') != None) else False
         get_carmin_error = lambda JSON_data, path: "CARMIN error received when querying " + '\'' + path + '\':\n[' + JSON_data['code'] + '] ' + JSON_data.get('message')
@@ -135,48 +127,16 @@ class CarminPlatformCandidate:
         # This data is necessary to determine if a CARMIN server simply does not have any boutiques descriptors.
         # Q: Does a canExecute pipeline indicate that the pipeline MUST have a reachable boutiquesdescriptor ?
         self.is_carmin_online = True
+
         # (3) GET each pipeline descriptors
         self.raw_descriptors = self._get_descriptors(executable_pipelines)
         if (len(self.raw_descriptors) == 0):
             self.message = "Host does have " + str(len(executable_pipelines)) + " user executable pipeline(s), but none returned at least one boutiques descriptor"
             return False
-        #valid_descriptor_count = self._get_valid_descriptor_count(self.JSON_descriptors)
-        #if (valid_descriptor_count == 0):
-        #    self.message = "Host has " + str(len(self.JSON_descriptors)) + " descriptor(s), but none are valid"
-        #    return False
 
-        #If we have reached here, then we have at least one descriptor that the user can execute
-        #self.message = "Host has " + str(valid_descriptor_count) + "valid boutiques descriptor(s)."
         self.message = "Host has " + str(len(self.raw_descriptors)) + " boutiques descriptor(s)."
         self.validated = True
-        return True            
-
-        '''
-        # First, fetch the pipelines
-        self.JSON_pipelines = self._get(self.url + "/pipelines")
-        
-        # Abort in case of errors.
-        if (self.erroneous):
-            return False
-
-        self.is_carmin_online = True        
-
-        # Then, parse the pipelines to see if they have pipelines the user (we) can execute.
-        #boutiques_pipelines = self._get_descriptors(self.JSON_pipelines)
-        self.JSON_descriptors = self._get_descriptors(self.JSON_pipelines)
-
-        #TODO: Process those pipelines to see if they have boutiques descriptors
-        self.descriptor_count = len(self.JSON_descriptors)
-        
-        if (self.descriptor_count == 0):
-            self.validated = False
-            self.message = "CARMIN server do not have any valid boutiques descriptors"
-            return False
-        
-        self.validated = True
-        self.message = "CARMIN server reached. (" + str(self.descriptor_count) + ") executable pipeline(s) with boutiques descriptor(s)."
         return True
-        '''
   
     def _urlize(self, url, path):
         
@@ -209,6 +169,7 @@ class CarminPlatformCandidate:
         self.db_carmin_platform.root_url = self.url
         self.db_carmin_platform.api_key = self.apikey
         self.db_carmin_platform.name = self.name
+        self.db_carmin_platform.is_public = self.is_public
         self.db_carmin_platform.save()
         
         carmin_platform = CarminPlatformEntry(self.db_carmin_platform)
@@ -241,12 +202,6 @@ class CarminPlatformEntry:
         # For each of those descriptors, validate and create a db entry
         # In the cases where one of the descriptor is invalid, create a database entry anyway.
         for raw_descriptor in raw_descriptors:
-            #descriptor_file = create_temporary_file(json.dumps(JSON_descriptor))
-            #descriptor_candidate = desc_utils.DescriptorDataCandidate(desc_utils.DescriptorDataCandidateLocalRawContainer(json.dumps(JSON_descriptor).encode()), 
-            #                                                                                                          carmin_platform=self.db_car, 
-            #                                                                                                          user=user,
-            #                                                                                                          is_public=is_public)
-            #descriptor_candidate.submit(allow_invalid=True)
             self._generate_descriptor(raw_descriptor)
 
             
@@ -257,25 +212,24 @@ class CarminPlatformEntry:
         #user = User.objects.get(pk=self.db_car.user_id)
         is_public = self.db_car.is_public
         data = desc_utils.DescriptorDataCandidate(desc_utils.DescriptorDataCandidateLocalRawContainer(descriptor_raw),
-                                         user=user, 
-                                         carmin_platform=self.db_car, 
-                                         is_public=is_public)
+                                                  user=user, 
+                                                  carmin_platform=self.db_car, 
+                                                  is_public=is_public)
         data.submit(allow_invalid=True)
-        return data.get_db()
+        return data
     
     def update(self, scheduled=False):
-
+        
+        self.unset_erroneous()                            
         user = self.db_car.user
         is_public = self.db_car.is_public
-        #print("url:"+str(self.db_car.root_url))
-        #print("api:"+str(self.db_car.api_key))
         
         data_getter = CarminPlatformCandidate(self.db_car.root_url, self.db_car.api_key)
         valid = data_getter.validate()
         if (not valid):
-            self.erroneous = True
-            self.error_message = data_getter.get_message()
-            
+
+            self.set_erroneous(data_getter.get_message())
+
             # Check if the platform is not valid due to the fact that its absent of any boutiques descriptors
             if (not data_getter.is_empty()):
                 # Otherwise its a platform error and we should propagate it to all the descriptor entries pertaining to this platform
@@ -298,20 +252,16 @@ class CarminPlatformEntry:
         current_md5 = {}
         for db_descriptor in self.get_descriptors():
             current_md5[db_descriptor.md5] = desc_utils.DescriptorEntry(db_descriptor)
+        
 
-        #print("md5_fetched:")
-        #print(fetched_md5)   
-        #print("md5_current:")
-        #print(current_md5)
-        #print(self.get_descriptors())
         # Add the new descriptors to database
         # If the update is performed in the context of testing scheduling, show those newly created descriptors as being scheduled for testing.
         #print(current_md5)
         for fetched in fetched_md5:
             if (not current_md5.get(fetched)):
-                db_desc = self._generate_descriptor(fetched_md5[fetched])
-                if (scheduled):
-                    desc = desc_utils.DescriptorEntry(db_desc)
+                data = self._generate_descriptor(fetched_md5[fetched])
+                if (scheduled and data.is_valid()):
+                    desc = desc_utils.DescriptorEntry(data.get_db())
                     desc.set_scheduled()
             
                 
@@ -326,8 +276,6 @@ class CarminPlatformEntry:
                 current_md5[current].update(force_static_validation=True, scheduled=scheduled)
                 #current_md5[current].set_inprogress()
         
-        #print("NEW DESCRIPTORS:")
-        #print(self.get_descriptors())
    
     def propagate_error(self):
 
@@ -342,7 +290,22 @@ class CarminPlatformEntry:
 
         return Descriptor.objects.filter(carmin_platform=self.db_car, user_id=user).all()
         
+    def set_erroneous(self, error_message):
         
+        self.erroneous = True
+        self.error_message = error_message
+        self.db_car.error_message = error_message
+        self.db_car.save()        
+        
+
+    def unset_erroneous(self):
+        
+        self.erroneous = False
+        self.error_message = ""       
+        self.db_car.error_message = ""
+        self.db_car.save()
+
+
     def get_descriptors_entries(self):
         
         descriptor_entries = []
@@ -351,3 +314,13 @@ class CarminPlatformEntry:
             descriptor_entries.append(desc_utils.DescriptorEntry(db_desc))
             
         return descriptor_entries
+
+
+    def delete(self):
+        
+        # The descriptors must be deleted first.
+        for desc in self.get_descriptors_entries():
+            desc.delete()
+
+        # Delete the carmin platform database entry
+        self.db_car.delete()
